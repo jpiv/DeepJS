@@ -1,4 +1,4 @@
-var debug = false;
+var LOG_LEVEL;
 class Synapse {
 	constructor(parentNeuron, childNeuron, lossFn, lossP) {
 		this.w = Math.random() - 0.5;
@@ -17,10 +17,6 @@ class Synapse {
 	}
 
 	backpropagateError(nodeError) {
-		// console.log(this.parent.output * this.w)
-		// const er = this.parent.output - (this.child.output - this.child.error);
-		// const error = this._loss(this.child.error, 1);
-		// console.log(this.parent.output)
 		this.gradient = this._lossP(this.child.error, this.child.sum, this.parent.output);
 		this.parent.updateError(this.child.error * this.w);
 	}
@@ -113,61 +109,84 @@ class Network {
 		this.biasNeurons = bias ? this.network.slice(0, -1).map(layer => layer[layer.length - 1]) : [];
 	}
 
+	static set logLevel(level) {
+		LOG_LEVEL = Number(level);
+	}
+
 	reset() {
 		this._networkAction(n => n.reset());
 	}
 
 	sendInput(inputs) {
 		this.reset()
-		var output = null;
-		if(inputs.length === this.inputNeurons.length) {
+		var results = [];
+		if(inputs && inputs.length === this.inputNeurons.length) {
 			this._networkAction((neuron, layer, index) => {
-				if(layer === 0 && index < inputs.length) {
+				if(this.inputNeurons.indexOf(neuron) > -1)
 					neuron.inputImpulse(inputs[index], false);
-				}
-				output = neuron.outputImpulse();
+				
+				if(this.outputNeurons.indexOf(neuron) > -1)
+					results.push(neuron.outputImpulse());
+				else
+					neuron.outputImpulse();
 			});
 		} else {
-			console.error('Invalid number of inputs');
+			throw new Error('Invalid number of inputs');
 		}
-		log('out', output)
-		return output;
+		log('out', results)
+		return results;
 	}
 
-	train(trainingData) {
-		const error = this._backpropagate(trainingData);
-		return error;
-	}
-
-	_backpropagate(trainingData) {
-		const { learnRate, momentum, set } = trainingData;
+	test(testSet) {
+		const setRunner = this.runSet(testSet);
 		const errorRates = [];
-		set.forEach((item, x) => {
-			let actual = this.sendInput(item.inputs)
-			let error = actual - item.ideal;
+		for(let value of setRunner) {
+			errorRates.push(value.error);
+		}
+
+		return this._meanAbsoluteError(errorRates);
+	}
+
+	train(trainingData, learnRate, momentum) {
+		this._backpropagate(trainingData, learnRate, momentum);
+	}
+
+	*runSet(set) {
+		for(let i in set){
+			let item = set[i];
+			let { inputs, ideal } = item;
+			let output = this.sendInput(item.inputs);	
+			let error = output.map((a, i) => a - item.ideal[i]);
+			log(1, '#' + (Number(i) + 1) + '/' + set.length, error.map(e => (e * 100).toFixed(2) + '%'))
+			yield { inputs, ideal, output, error };
+		}
+	}
+
+	_backpropagate(set, learnRate, momentum) {
+		const setRunner = this.runSet(set);
+		for(let result of setRunner) {
 			this._networkAction((neuron, layer, index) => {
-				if(this.outputNeurons.indexOf(neuron) === index && layer === this.network.length - 1) {
-					neuron.setError(error);
+				let outputIndex = this.outputNeurons.indexOf(neuron);
+				if(outputIndex > -1) {
+					neuron.setError(result.error[outputIndex]);
 				}
 				neuron.backpropagateError();
 			}, true);
 			this._networkAction(n => n.gradientDescent(learnRate, momentum));
-			errorRates.push(error);
-			console.log((error.toFixed(5) * 100) + '%')
-			if(x > set.length - 10) debug = false;
-		});
-
-		console.log(this.sendInput([0, 0]))
-		return this._meanSquaredError(errorRates)
+		}
 	}
 
-	_averageError(errorRates) {
-		let totalError = errorRates.reduce((acc, err) => acc + err, 0) / errorRates.length;
+	_meanAbsoluteError(errorRates) {
+		let totalError = errorRates[0].map((rate, i) =>
+			errorRates.reduce((acc, err) =>
+				acc + Math.abs(err[i]), 0) / errorRates.length);
 		return totalError;
 	}
 
 	_meanSquaredError(errorRates) {
-		let totalError = errorRates.reduce((acc, err) => acc + Math.pow(err, 2), 0) / errorRates.length;
+		let totalError = errorRates[0].map((rate, i) =>
+			errorRates.reduce((acc, err) =>
+				acc + Math.pow(err[i], 2), 0) / errorRates.length);
 		return totalError;
 	}
 
@@ -209,72 +228,10 @@ class Network {
 	}
 }
 
-const layers = [2, 2, 3, 1];
-const sigmoid = x => {
-	return 1 / (1 + Math.exp(-x));
-};
-const sigmoidPrime = x => {
-	return sigmoid(x) * (1 - sigmoid(x));
-};
-const linear = x => {
-	return x;
-};
-const linearPrime = x => 1;
-const loss = (e, o) => {
-	return e * sigmoid(o) * (1- sigmoid(o))
-};
-const lossP = (childErr, childSum, parentOutput) => {
-	return childErr * sigmoidPrime(childSum) * parentOutput 
-	// return e * w * e;	
-};
-const makeTrainingSet = size => {
-	const samples = (function* (i) {
-		while(1) {
-			// for(let i = 0; i < 2; i++) {
-			// 	for(let j = 0; j < 2; j++) {
-			// 		yield [i, j];
-			// 	}
-			// }
-			yield [Math.round(Math.random()), Math.round(Math.random())]
-			// yield [0, 0]
-		}
-	})();
-	return Array.from(Array(size).keys(), i => {
-		const inputs = samples.next().value;
-		const ideal = inputs[0] ^ inputs[1];
-		return { ideal, inputs };
-	}); 
-};
-
-const nets = Array.from(Array(1).keys(), () => new Network(layers, sigmoid, sigmoidPrime, loss, lossP));
-const set = makeTrainingSet(1000000);
-// set.forEach(i => console.log(i))
-var best = {error: 14};
-nets.forEach((net, i) => { 
-	let error = net.train({
-		learnRate: 0.35,
-		momentum: 0.2,
-		set
-	});
-	
-	console.log(`
-	Error: ${error.toFixed(2) * 100}%
-	Results:
-		in: 0, 0
-		out: ${net.sendInput([0, 0])}
-
-		in: 0, 1
-		out: ${net.sendInput([0, 1])}
-
-		in: 1, 0
-		out: ${net.sendInput([1, 0])}
-
-		in: 1, 1
-		out: ${net.sendInput([1, 1])}
-
-	`)
-});	
-function log() {
-	if(debug)
-		console.log.apply(console, arguments)
+function log(level, ...args) {
+	if(level === LOG_LEVEL) {
+		return console.log.apply(console.log, args);
+	}
 }
+
+module.exports = Network;
