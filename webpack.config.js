@@ -12,7 +12,8 @@ module.exports = {
 		extensions: ['.js', '.jsx'],
 		alias: {
 			'app': path.resolve('./app'),
-			'core': path.resolve('./app/core')
+			'core': path.resolve('./app/core'),
+			'learning': path.resolve('./learning')
 		}
 	},
 

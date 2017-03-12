@@ -3,9 +3,9 @@ import ReactDom from 'react-dom';
 
 import st from './app.scss';
 import { inject } from 'mobx-react';
-import Jobs from './views/Jobs'
+import Home from './views/home'
 
-@inject('jobs')
+@inject('app')
 export default class App extends Component {
 	constructor(props) {
 		super(props);
@@ -14,14 +14,14 @@ export default class App extends Component {
 	}
 
 	async fetchInitialData() {
-		const { jobs } = this.props;
-		const response = await jobs.fetch();
+		const { app } = this.props;
+		const response = await app.fetch();
 	}
 
 	render() {
 		return (
 			<div className={ st.app }>
-				<Jobs />
+				<Home />
 			</div>
 		)
 	}

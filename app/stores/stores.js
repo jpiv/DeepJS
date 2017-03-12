@@ -1,5 +1,5 @@
-import JobStore from './jobStore';
+import AppStore from './appStore';
 
 export default {
-	jobs: new JobStore(),
+	app: new AppStore()
 };
