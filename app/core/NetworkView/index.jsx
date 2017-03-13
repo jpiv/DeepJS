@@ -103,7 +103,7 @@ export default class NetworkView extends Component {
 
 	render() {
 		return (
-			<div className={ st.Network }>
+			<div className={ st.NetworkView }>
 				<div ref={ el => this.matterEl = el } />
 			</div>
 		);
@@ -119,9 +119,9 @@ const SynapseBody = (bodyA, bodyB, weight) =>
 		bodyB,
 		pointA: Vector.create(0, NEUR_RADIUS),
 		pointB: Vector.create(0, -NEUR_RADIUS),
-		chamfer: { radius: [25, 25, 25, 25] },
 		render: {
-			lineWidth: SYN_THICKNESS * Math.abs(weight),
+			chamfer: { radius: [25, 25, 25, 25] },
+			lineWidth: Math.min(SYN_THICKNESS * Math.abs(weight), SYN_THICKNESS * 3),
 			strokeStyle: Math.sign(weight) < 0 ? 'red' : 'green',
 			isStatic: true
 		}

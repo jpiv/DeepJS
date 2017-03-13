@@ -5,6 +5,7 @@ import { BackpropNetwork } from 'learning/learning';
 import Fn from 'learning/functions';
 import NetworkView from 'core/NetworkView';
 import BackpropTrainer from 'core/BackpropTrainer';
+import st from './index.scss';
 
 const { activation: { sigmoid, sigmoidPrime }, error: { defaultLoss, defaultLossP } } = Fn;
 
@@ -12,7 +13,7 @@ export default class Home extends Component {
 	constructor(props) {
 		super(props);
 		const funcs = [sigmoid, sigmoidPrime, defaultLoss, defaultLossP];
-		const layers = [2, 3, 1];
+		const layers = [2, 5, 1];
 		this.state = { 
 			network: new BackpropNetwork(layers, ...funcs),
 			updater: null
@@ -26,7 +27,7 @@ export default class Home extends Component {
 	render() {
 		const { network, updater } = this.state;
 		return (
-			<div>
+			<div className={ st.Home }>
 				<NetworkView
 					width={ 900 }
 					height={ 650 }
