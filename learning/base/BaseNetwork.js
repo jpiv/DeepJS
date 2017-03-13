@@ -15,7 +15,7 @@ class BaseNetwork {
 		this.biasNeurons = bias ? this.network.slice(0, -1).map(layer => layer[layer.length - 1]) : [];
 	}
 
-	static set logLevel(level) {
+	set logLevel(level) {
 		Logger.LOG_LEVEL = Number(level);
 	}
 

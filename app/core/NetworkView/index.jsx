@@ -8,7 +8,8 @@ import {
 	Body,
 	Render,
 	Vector,
-	Constraint
+	Constraint,
+	Events
 } from 'matter-js';
 
 import st from './index.scss'; 
@@ -19,18 +20,18 @@ const SYN_THICKNESS = 3
 @inject('app') @observer
 export default class NetworkView extends Component {
 	static propTypes = {
-		layers: PropTypes.object
+		layers: PropTypes.object,
+		iteration: PropTypes.number
 	};
 
 	constructor(props) {
 		super(props);
 		this.engine = Engine.create();
 		this.renderer = null;
-		this.renderNetwork();
 	}
 
 	componentDidMount() {
-		const { width, height } = this.props;
+		const { onRef, width, height, network } = this.props;
 		this.renderer = Render.create({
 			element: this.matterEl,
 			engine: this.engine,
@@ -38,10 +39,16 @@ export default class NetworkView extends Component {
 		});
 		Engine.run(this.engine);
 		Render.run(this.renderer);
+		onRef && onRef(this);
+		this.renderNetwork(network);
 	}
 
-	renderNetwork() {
-		const { network, width, height } = this.props;
+	refresh(i, result, network) {
+		this.renderNetwork(network)
+	}
+
+	renderNetwork(network) {
+		const { width, height } = this.props;
 		const layers = network.network;
 		const layerHeight = height / layers.length;
 		const bodies = [];
@@ -61,6 +68,7 @@ export default class NetworkView extends Component {
 					return acc;
 			}, 0);
 		};
+		World.clear(this.engine.world);
 
 		// Create Neurons
 		network.networkAction((n, layer, index) => {
@@ -81,6 +89,7 @@ export default class NetworkView extends Component {
 			});
 		});
 		World.add(this.engine.world, bodies);
+		Render.world(this.renderer);
 	}
 
 	render() {
@@ -93,8 +102,8 @@ export default class NetworkView extends Component {
 }
 
 const NeuronBody = (x, y) => Bodies.circle(x, y, NEUR_RADIUS, {
-	isStatic: true
-});
+		isStatic: true
+	});
 const SynapseBody = (bodyA, bodyB, weight) =>
 	Constraint.create({
 		bodyA,

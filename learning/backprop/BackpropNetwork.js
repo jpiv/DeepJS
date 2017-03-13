@@ -11,8 +11,9 @@ class BackpropNetwork extends BaseNetwork {
 
 	_backpropagate(set, learnRate, momentum, iterator) {
 		const setRunner = this.runSet(set);
+		var iteration = 0;
 		for(let result of setRunner) {
-			iterator && iterator(result, this);
+			iterator && iterator(iteration, result, this);
 			this.networkAction((neuron, layer, index) => {
 				let outputIndex = this.outputNeurons.indexOf(neuron);
 				if(outputIndex > -1) {
@@ -21,6 +22,7 @@ class BackpropNetwork extends BaseNetwork {
 				neuron.backpropagateError();
 			}, true);
 			this.networkAction(n => n.gradientDescent(learnRate, momentum));
+			iteration++;
 		}
 	}
 }
