@@ -31,7 +31,7 @@ export default class NetworkView extends Component {
 	}
 
 	componentDidMount() {
-		const { onRef, width, height, network } = this.props;
+		const { width, height, network } = this.props;
 		this.renderer = Render.create({
 			element: this.matterEl,
 			engine: this.engine,
@@ -39,12 +39,22 @@ export default class NetworkView extends Component {
 		});
 		Engine.run(this.engine);
 		Render.run(this.renderer);
-		onRef && onRef(this);
 		this.renderNetwork(network);
 	}
 
-	refresh(i, result, network) {
-		this.renderNetwork(network)
+	componentDidUpdate() {
+		const { updater } = this.props;
+		updater && Events.on(this.renderer, 'beforeRender', ::this.refresh);
+	}
+
+	refresh() {
+		const { updater } = this.props;
+		const next = updater.next();
+		if(!next.done) {
+			this.renderNetwork(next.value.network);
+		}
+		else
+			Events.off(this.renderer, 'beforeRender');
 	}
 
 	renderNetwork(network) {
@@ -89,7 +99,6 @@ export default class NetworkView extends Component {
 			});
 		});
 		World.add(this.engine.world, bodies);
-		Render.world(this.renderer);
 	}
 
 	render() {
@@ -110,8 +119,9 @@ const SynapseBody = (bodyA, bodyB, weight) =>
 		bodyB,
 		pointA: Vector.create(0, NEUR_RADIUS),
 		pointB: Vector.create(0, -NEUR_RADIUS),
+		chamfer: { radius: [25, 25, 25, 25] },
 		render: {
-			lineWidth: SYN_THICKNESS + (weight * SYN_THICKNESS),
+			lineWidth: SYN_THICKNESS * Math.abs(weight),
 			strokeStyle: Math.sign(weight) < 0 ? 'red' : 'green',
 			isStatic: true
 		}

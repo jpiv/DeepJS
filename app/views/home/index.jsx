@@ -11,28 +11,30 @@ const { activation: { sigmoid, sigmoidPrime }, error: { defaultLoss, defaultLoss
 export default class Home extends Component {
 	constructor(props) {
 		super(props);
-		this.state = { networkViewEl: null };
+		const funcs = [sigmoid, sigmoidPrime, defaultLoss, defaultLossP];
+		const layers = [2, 3, 1];
+		this.state = { 
+			network: new BackpropNetwork(layers, ...funcs),
+			updater: null
+		};
 	}
 
-	onNetworkViewRef(ref) {
-		this.setState({ networkViewEl: ref });
+	onNetworkUpdate(updater) {
+		this.setState({ updater });
 	}
 
 	render() {
-		const { networkViewEl } = this.state;
-		const funcs = [sigmoid, sigmoidPrime, defaultLoss, defaultLossP];
-		const layers = [2, 2, 3, 1];
-		const network = new BackpropNetwork(layers, ...funcs);
+		const { network, updater } = this.state;
 		return (
 			<div>
 				<NetworkView
-					onRef={ ::this.onNetworkViewRef }
 					width={ 900 }
 					height={ 650 }
-					network={ network } />
-				{ networkViewEl && <BackpropTrainer
+					network={ network } 
+					updater={ updater } />
+				<BackpropTrainer
 					network={ network }
-					onNetworkUpdate={ networkViewEl.refresh.bind(networkViewEl) } /> }
+					onNetworkUpdate={ ::this.onNetworkUpdate } />
 			</div>
 		)
 	}
