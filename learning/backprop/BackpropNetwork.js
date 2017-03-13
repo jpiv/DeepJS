@@ -5,13 +5,14 @@ class BackpropNetwork extends BaseNetwork {
 		super(BackpropNeuron, ...arguments);
 	}
 
-	train(trainingData, learnRate, momentum) {
-		this._backpropagate(trainingData, learnRate, momentum);
+	train(trainingData, learnRate, momentum, iterator) {
+		this._backpropagate(trainingData, learnRate, momentum, iterator);
 	}
 
-	_backpropagate(set, learnRate, momentum) {
+	_backpropagate(set, learnRate, momentum, iterator) {
 		const setRunner = this.runSet(set);
 		for(let result of setRunner) {
+			iterator && iterator(result, this);
 			this.networkAction((neuron, layer, index) => {
 				let outputIndex = this.outputNeurons.indexOf(neuron);
 				if(outputIndex > -1) {

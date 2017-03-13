@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import ReactDom from 'react-dom';
 
-import { Network } from 'learning/learning';
+import { BackpropNetwork } from 'learning/learning';
 import Fn from 'learning/functions';
 import NetworkView from 'core/NetworkView';
 
@@ -10,10 +10,13 @@ const { activation: { sigmoid, sigmoidPrime }, error: { defaultLoss, defaultLoss
 export default class Home extends Component {
 	render() {
 		const funcs = [sigmoid, sigmoidPrime, defaultLoss, defaultLossP];
-		const layers = [2, 4, 1];
+		const layers = [2, 2, 3, 1];
 		return (
 			<div>
-				<NetworkView network={ new Network(layers, ...funcs) } />
+				<NetworkView
+					width={ 900 }
+					height={ 650 }
+					network={ new BackpropNetwork(layers, ...funcs) } />
 			</div>
 		)
 	}
