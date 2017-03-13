@@ -19,8 +19,11 @@ class Trainer {
 		console.log('Time:', timeS, timeMs);
 	}
 
-	trainNetworks(set, learnRate, momentum) {
-		this.net.train(set, learnRate, momentum, this.iterator);
+	trainNetworks(set, learnRate, momentum, gen=false) {
+		if(!gen)
+			this.net.train(set, learnRate, momentum);
+		else
+			return this.net.genTrain(set, learnRate, momentum);
 	}
 
 	testNetworks(testSet, displaySet) {
@@ -48,9 +51,24 @@ class Trainer {
 		this.testNetworks(testSet, displaySet);
 	}
 
-	learnXOR(n) {
+	*learnGen(layers, rate, momentum, trainSize, testSize, dispSize, setFn) {
+		this.net = this.net ||
+			new BackpropNetwork(layers, fn.activation.sigmoid, fn.activation.sigmoidPrime, fn.error.defaultLoss, fn.error.defaultLossP)
+		this.net.logLevel = this.logLevel;
+		const trainingSet = setFn(trainSize);
+		const testSet = setFn(testSize);
+		const displaySet = setFn(dispSize);
+		yield* this.trainNetworks(trainingSet, rate, momentum, true);
+		this.testNetworks(testSet, displaySet);
+	}
+
+	learnXOR(n, gen=false) {
 		const layers = [2, 4, 1];
-		this.learn(layers, 0.4, 0.2, n, 100, 4, setGen.XOR);
+		this.net.logLevel =1 ;
+		if(!gen)
+			this.learn(layers, 0.4, 0.2, n, 100, 4, setGen.XOR);
+		else
+			return this.learnGen(layers, 0.4, 0.2, n, 100, 4, setGen.XOR);
 	}
 
 	learnNOT() {
