@@ -4,6 +4,7 @@ import { API_URL, CSRF_TOKEN } from '../../config';
 export default class AppStore {
 	@observable items = null;
 	@observable loading = true;
+	@observable networkSync = 0;
 
 	@action.bound
 	fetch() {

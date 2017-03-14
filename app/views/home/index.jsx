@@ -15,7 +15,7 @@ export default class Home extends Component {
 		const funcs = [sigmoid, sigmoidPrime, defaultLoss, defaultLossP];
 		const layers = [2, 5, 1];
 		this.state = { 
-			network: new BackpropNetwork(layers, ...funcs),
+			network: new BackpropNetwork(layers, ...funcs, true),
 			updater: null
 		};
 	}

@@ -17,7 +17,8 @@ import st from './index.scss';
 const NEUR_RADIUS = 20;
 const SYN_THICKNESS = 3
 
-@inject('app') @observer
+@inject(store => ({ sync: store.app.networkSync }))
+@observer
 export default class NetworkView extends Component {
 	static propTypes = {
 		layers: PropTypes.object,
@@ -43,8 +44,9 @@ export default class NetworkView extends Component {
 	}
 
 	componentDidUpdate() {
-		const { updater } = this.props;
+		const { updater, network } = this.props;
 		updater && Events.on(this.renderer, 'beforeRender', ::this.refresh);
+		this.renderNetwork(network);
 	}
 
 	refresh() {
