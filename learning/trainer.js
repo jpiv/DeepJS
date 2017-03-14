@@ -90,6 +90,15 @@ class Trainer {
 		const layers = [3, 15, 2];
 		this.learn(layers, 0.2, 0.2, 100000, 100, 9, setGen.mutualXOR);
 	}
+
+	learnDivision(n, gen=false) {
+		const layers = [2, 20, 1];
+		this.net.logLevel =1;
+		if(!gen)
+			this.learn(layers, 0.1, 0.2, n, 100, 4, setGen.division);
+		else
+			return this.learnGen(layers, 0.4, 0.2, n, 100, 4, setGen.division);
+	}
 };
 
 module.exports = Trainer;

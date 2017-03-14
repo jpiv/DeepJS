@@ -1,26 +1,45 @@
 const { meanAbsoluteError } = require('../functions.js').error;
+const { linear } = require('../functions.js').activation;
 const Logger = require('../log.js');
 class BaseNetwork {
-	constructor(NeuronClass, layers, activationFn, activationFnDerivative, lossFn, lossP, bias=true) {
+	constructor(NeuronClass, layers, activationFn, activationFnDerivative, lossFn, lossP, activateOutput=true, bias=true) {
 		this.bias = bias;
 		this.activationFn = activationFn;
 		this.activationFnDerivative = activationFnDerivative;
 		this._loss = lossFn;
 		this._lossP = lossP;
 		this.Neuron = NeuronClass;
+		this.activateOutput = activateOutput;
+		this._layers = layers;
 		this.network = this._constructNetwork(layers);
-		this.inputNeurons = bias ? this.network[0].slice(0, -1)
+		this.setUpNeuronGroups();
+	}
+
+	setUpNeuronGroups() {
+		this.inputNeurons = this.bias ? this.network[0].slice(0, -1)
 			: this.nework[0];
 		this.outputNeurons = this.network[this.network.length - 1];
-		this.biasNeurons = bias ? this.network.slice(0, -1).map(layer => layer[layer.length - 1]) : [];
+		this.biasNeurons = this.bias ? this.network.slice(0, -1).map(layer => layer[layer.length - 1]) : [];
 	}
 
 	set logLevel(level) {
 		Logger.LOG_LEVEL = Number(level);
 	}
 
+	set layers(layers) {
+		this._layers = layers;
+		this.network = this._constructNetwork(layers);
+		this.setUpNeuronGroups();
+	}
+
 	reset() {
 		this.networkAction(n => n.reset());
+	}
+
+	reconstruct() {
+		this.reset();
+		this.network = this._constructNetwork(this._layers)
+		this.setUpNeuronGroups();
 	}
 
 	sendInput(inputs) {
@@ -29,7 +48,7 @@ class BaseNetwork {
 		if(inputs && inputs.length === this.inputNeurons.length) {
 			this.networkAction((neuron, layer, index) => {
 				if(this.inputNeurons.indexOf(neuron) > -1)
-					neuron.inputImpulse(inputs[index], false);
+					neuron.inputImpulse(inputs[index]);
 				
 				if(this.outputNeurons.indexOf(neuron) > -1)
 					results.push(neuron.outputImpulse());
@@ -77,8 +96,14 @@ class BaseNetwork {
 
 	_constructNetwork(layers) {
 		const network = layers.map((l, i) => {
-			const group = Array.from(Array(l).keys(), (j) => new this.Neuron(this.activationFn, this.activationFnDerivative, this._loss, this._lossP, this._id(i, j)));
-			this.bias && i !== layers.length - 1 && group.push(new this.Neuron(this.activationFn, this.activationFnDerivative, this._loss, this._lossP, this._id(i, group.length)));
+			const activation = (i === 0 || (i === layers.length - 1 && !this.activateOutput))
+				? linear : this.activationFn;
+			const group = Array.from(Array(l).keys(), (j) => new this.Neuron(
+					activation, this.activationFnDerivative,
+					this._loss, this._lossP, this._id(i, j)));
+			this.bias && i !== layers.length - 1 && group.push(new this.Neuron(
+					this.activationFn, this.activationFnDerivative,
+					this._loss, this._lossP, this._id(i, group.length)));
 			return group;
 		});
 

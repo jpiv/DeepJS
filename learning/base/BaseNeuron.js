@@ -29,9 +29,9 @@ class BaseNeuron {
 		this._errorSum = 0;
 	}
 
-	inputImpulse(value, activate=true) {
+	inputImpulse(value) {
 		this.sum += value;
-		this.output = activate ? this._activation(this.sum) : this.sum;
+		this.output = this._activation(this.sum);
 	}
 
 	// Update sum of synapses

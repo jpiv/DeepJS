@@ -1,4 +1,4 @@
-const sampleGenerator = function* (size, dimensions) {
+const binarySampleGenerator = function* (size, dimensions) {
 	while(1) {
 		let sample = Array.from(Array(dimensions).keys(), () => 0);
 		const generateSample = function* (currentDim) {
@@ -15,6 +15,12 @@ const sampleGenerator = function* (size, dimensions) {
 	}
 };
 
+const randomSampleGenerator = function* (size, dimensions, range, offset) {
+	while(1) {
+		yield Array.from(Array(dimensions).keys(), () => Math.random() * range + offset);
+	}
+};
+
 module.exports = {
 	mutualXOR(size) {
 		const samples = sampleGenerator(size, 3);
@@ -26,7 +32,7 @@ module.exports = {
 	},
 
 	XOR(size) {
-		const samples = sampleGenerator(size, 2);
+		const samples = binarySampleGenerator(size, 2);
 		return Array.from(Array(size).keys(), i => {
 			const inputs = samples.next().value;
 			const ideal = [inputs[0] ^ inputs[1]];
@@ -35,7 +41,7 @@ module.exports = {
 	},
 
 	NOT(size) {
-		const samples = sampleGenerator(size, 1);
+		const samples = binarySampleGenerator(size, 1);
 		return Array.from(Array(size).keys(), i => {
 			const inputs = samples.next().value;
 			const ideal = [Number(!inputs[0])]
@@ -44,7 +50,7 @@ module.exports = {
 	},
 
 	AND(size) {
-		const samples = sampleGenerator(size, 2);
+		const samples = binarySampleGenerator(size, 2);
 		return Array.from(Array(size).keys(), i => {
 			const inputs = samples.next().value;
 			const ideal = [inputs[0] & inputs[1]];
@@ -53,10 +59,19 @@ module.exports = {
 	},
 
 	XOR3(size) {
-		const samples = sampleGenerator(size, 3);
+		const samples = binarySampleGenerator(size, 3);
 		return Array.from(Array(size).keys(), i => {
 			const inputs = samples.next().value;
 			const ideal = [(inputs[0] ^ inputs[1]) ^ inputs[2]];
+			return { ideal, inputs };
+		}); 
+	},
+
+	division(size) {
+		const samples = randomSampleGenerator(size, 2, 50, 1);
+		return Array.from(Array(size).keys(), i => {
+			const inputs = samples.next().value;
+			const ideal = [inputs[0] / inputs[1]];
 			return { ideal, inputs };
 		}); 
 	}

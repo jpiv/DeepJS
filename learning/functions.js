@@ -3,7 +3,8 @@ const Fn = {
 		sigmoid: x =>
 			1 / (1 + Math.exp(-x)),
 		sigmoidPrime: x =>
-			Fn.activation.sigmoid(x) * (1 - Fn.activation.sigmoid(x))
+			Fn.activation.sigmoid(x) * (1 - Fn.activation.sigmoid(x)),
+		linear: x => x
 	},
 	error: {
 		defaultLoss: (e, o) =>
