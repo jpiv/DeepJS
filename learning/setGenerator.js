@@ -68,7 +68,7 @@ module.exports = {
 	},
 
 	division(size) {
-		const samples = randomSampleGenerator(size, 2, 50, 1);
+		const samples = randomSampleGenerator(size, 2, 20, 1);
 		return Array.from(Array(size).keys(), i => {
 			const inputs = samples.next().value;
 			const ideal = [inputs[0] / inputs[1]];

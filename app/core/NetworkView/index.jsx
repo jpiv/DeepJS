@@ -15,7 +15,7 @@ import {
 import st from './index.scss'; 
 
 const NEUR_RADIUS = 20;
-const SYN_THICKNESS = 3
+const SYN_THICKNESS = 1;
 
 @inject(store => ({ sync: store.app.networkSync }))
 @observer
@@ -122,8 +122,7 @@ const SynapseBody = (bodyA, bodyB, weight) =>
 		pointA: Vector.create(0, NEUR_RADIUS),
 		pointB: Vector.create(0, -NEUR_RADIUS),
 		render: {
-			chamfer: { radius: [25, 25, 25, 25] },
-			lineWidth: Math.min(SYN_THICKNESS * Math.abs(weight), SYN_THICKNESS * 3),
+			lineWidth: Math.min(Math.max(SYN_THICKNESS * Math.abs(weight), SYN_THICKNESS), SYN_THICKNESS * 3),
 			strokeStyle: Math.sign(weight) < 0 ? 'red' : 'green',
 			isStatic: true
 		}

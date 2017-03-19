@@ -34,6 +34,7 @@ export default class BackpropTrainer extends Component {
 		this.state = Immutable({
 			inputs: Array.from(Array(network.inputNeurons.length).keys(), () => 0),
 			operator: operators.xor,
+			isOutputActiavted: true,
 			layers: [2, 5, 1],
 			training: false,
 			iteration: 0,
@@ -114,6 +115,16 @@ export default class BackpropTrainer extends Component {
 		onNetworkUpdate(gen.call(this));
 	}
 
+	toggleOutputActivation() {
+		const { network, app } = this.props;
+		const { isOutputActiavted } = this.state;
+		this.state = this.state.set('isOutputActiavted', !isOutputActiavted);
+		network.activateOutput = !isOutputActiavted;
+		network.reconstruct();
+		app.networkSync++;
+		this.forceUpdate();
+	}
+
 	resetNetwork() {
 		const { network, app } = this.props;
 		network.reconstruct();
@@ -170,7 +181,7 @@ export default class BackpropTrainer extends Component {
 	}
 
 	render() {
-		const { iteration, output, error, operator, setSize } = this.state;
+		const { iteration, output, error, operator, setSize, isOutputActiavted } = this.state;
 		return (
 			<div className={ st.BackpropTrainer }>
 				<div className={ st.col }>
@@ -185,6 +196,9 @@ export default class BackpropTrainer extends Component {
 					<button onClick={ ::this.handleSendInput }>Send Input</button>
 					<br />
 					<span>Output: { output }</span>	
+					<br />
+					<button onClick={ ::this.toggleOutputActivation }>Activate Output?</button>
+					<span> { String(isOutputActiavted) }</span>
 					<br />
 					<span>Error: { (error * 100).toFixed(2) }%</span>
 					{ this.renderLayerInputs() }
