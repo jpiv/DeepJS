@@ -1,6 +1,8 @@
+const BaseSynapse = require('./BaseSynapse.js');
 const { log } = require('../log.js');
+
 class BaseNeuron {
-	constructor(SynapseClass, activationFn, activationPrime, lossFn, lossP, id) {
+	constructor(SynapseClass=BaseSynapse, activationFn, activationPrime, lossFn, lossP, id) {
 		this.id = id || 'N0';
 		this.parentSynapses = [];
 		// Output synapses

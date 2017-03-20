@@ -8,5 +8,9 @@ const trainer = new Trainer(null, b);
 if(debugArg > -1)
 	trainer.logLevel = process.argv[debugArg + 1];
 
-Trainer.time(() => trainer.learnXOR(50000));
+// Trainer.time(() => trainer.learnXOR(50000));
 // Trainer.time(() => trainer.learnDivision(650000));
+
+
+const NeatNetwork = require('./neuroevolution/NeatNetwork.js');
+const net = new NeatNetwork(2, 1);

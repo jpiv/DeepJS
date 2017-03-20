@@ -1,14 +1,14 @@
 const { meanAbsoluteError } = require('../functions.js').error;
 const Logger = require('../log.js');
-class BaseNetwork {
+class Network {
 	constructor(network) {
 		if(network)
 			this.network = network;
 	}
 
 	setupNeuronGroups() {
-		this.inputNeurons = this._network[0];
-		this.outputNeurons = this._network[this._network.length - 1];
+		this.inputNeurons = network[0];
+		this.outputNeurons = network[network.length - 1];
 	}
 
 	set network(network) {
@@ -77,4 +77,4 @@ class BaseNetwork {
 	}
 }
 
-module.exports = BaseNetwork;
+module.exports = Network;
