@@ -15,19 +15,23 @@ class Gene extends BaseSynapse {
 		this.enabled = true;
 		this.w = weight ? weight : this.w;
 		this.parent.connect(this, this.child);
+		this.id = Gene.idFor(this.parent, this.child);
+	}
 
+	static idFor(parent, child) {
+		return parent.id + child.id;
 	}
 
 	mutateWeight() {
 		// Random weight shift -0.1 to 0.1
 		const wShift = Math.random() * 0.2 - 0.1; 	
 		this.w += wShift;
-		console.log('Mutate weight:', this.w);
+		console.log('Mutate weight:', this.w, this.id);
 	}
 
 	mutateEnabled() {
 		this.enabled = !this.enabled;
-		console.log('Mutate enabled:', this.enabled);
+		console.log('Mutate enabled:', this.enabled, this.id);
 	}	
 
 	mutate() {
@@ -37,20 +41,6 @@ class Gene extends BaseSynapse {
 		];
 		const mutationIndex = Math.floor(Math.random() * mutations.length);
 		mutations[mutationIndex].call(this);
-	}
-
-	replaceChild(newChild)  {
-		this.child.disconnectParent(this);
-		this.child = newChild;	
-		this.parent.reconnect(this, newChild);
-		this.id = this.parent.id + this.child.id;
-	}
-
-	split(innovation) {
-		const newNode = new GANeuron(innovation + 'P');
-		const newGene = new Gene(innovation, newNode, this.child, this.w);
-		this.replaceChild(newNode);
-		return newGene;
 	}
 
 	clone() {
@@ -86,47 +76,29 @@ class GANeuron extends BaseNeuron {
 
 // NEAT Algorithm (Neuro Evolution of Augmenting Topologies)
 class NeatNetwork extends BaseNetwork {
-	constructor(options={}, innovator, id='N0', _genes) {
+	constructor(options={}, id='N0', _genes) {
 		super();
 		const numInputs = options.inputs || 1;
 		const numOutputs = options.outputs || 1;
-		this.innovator = innovator;
 		this.genes = _genes || this._constructGenes(numInputs, numOutputs);
-		this.inputNeurons = this.genes.slice(0, numInputs).map(n => n.parent);
+		this.inputNeurons = this.genes
+			.filter(g => !g.parent.parentSynapses.length)
+			.map(g => g.parent);
 		this.network = this._constructNetwork();
 		this.mutationRate = options.mutationRate || 0.01;
 		this.id = id;
 		console.log(this.id)
 		this.networkAction((n, layer, index) => console.log('\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
+		console.log('\tGenes:')
+		this.genes.forEach(g => console.log('\t', g.id, g.innovation))
 	}
 
-	static fromGenes(genes, options={}, innovator, id) {
-		return new NeatNetwork(options, innovator, id, genes);
+	static fromGenes(genes, options={}, id) {
+		return new NeatNetwork(options, id, genes);
 	} 
 
 	get shouldMutate() {
 		return Math.random() < this.mutationRate;
-	}
-
-	splitGene(genes) {
-		// Split random gene
-		const gIndex = Math.floor(Math.random() * genes.length);
-		genes.push(genes[gIndex].split(this.innovator.next()));
-		console.log('Split');
-	}
-
-	createNewConnection(genes) {
-		// Add new gene
-		// TODO: handle existing connection better
-		const parent = genes[Math.floor(Math.random() * genes.length)].parent;
-		const child = genes[Math.floor(Math.random() * genes.length)].child;
-		const connectionExists =
-			parent.synapses.map(syn => syn.child).indexOf(child) > -1;
-		console.log('New Connection', connectionExists);
-		if(!connectionExists)
-			genes.push(new Gene(this.innovator.next(), parent, child));
-		else
-			console.log('Connection already exists, not pushed');
 	}
 
 	replicateGenes() {
@@ -136,11 +108,7 @@ class NeatNetwork extends BaseNetwork {
 				newG.mutate();	
 			return newG;
 		});
-		// Complexification
-		if(this.shouldMutate)
-			this.splitGene(newGenes);
-		if(this.shouldMutate)
-			this.createNewConnection(newGenes);			
+
 		return newGenes;
 	}
 
@@ -172,11 +140,11 @@ class NeatNetwork extends BaseNetwork {
 		for(let i = 0; i < outputs; i++) {
 			for(let j = 0; j < inputs; j++) {
 				const child = genes[0] ? genes[0].child : null;
-				genes.push(new Gene(this.innovator.next(), null, child));
+				genes.push(new Gene(j + (i * j), null, child));
 			}
 		}
 		return genes;
 	}
 }
 
-module.exports = NeatNetwork;
+module.exports = { NeatNetwork, Gene, GANeuron };

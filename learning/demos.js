@@ -13,4 +13,4 @@ if(debugArg > -1)
 
 
 const NeatManager = require('./neuroevolution/NeatManager.js');
-const nm = new NeatManager({ populationSize: 2, network: { mutationRate: .75, inputs: 2 } });
+const nm = new NeatManager({ populationSize: 3, network: { mutationRate: .75, inputs: 2 } });

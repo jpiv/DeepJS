@@ -1,33 +1,37 @@
-const NeatNetwork = require('./NeatNetwork.js');
+const { NeatNetwork, Gene, GANeuron } = require('./NeatNetwork.js');
 const rng = require('random-word');
 
 class NeatManager {
 	constructor(options={}) {
-		this.innovator = {
-			total: -1,
-			next() {
-				this.total++;
-				return this.total;
-			}
-		};
 		this.networkOptions = options.network;
+		this.allGenes = [];
 		this.populationSize = options.populationSize || 0;
 		this.population = this._initialPopulation();
 		this.compatibilityThreshold = options.compatibilityThreshold || 0.1;
-		console.log(this.innovator, 'in pop');
 		this.species = this.speciate();
 	}
 
+	get shouldComplexify() {
+		return Math.random() < this.networkOptions.mutationRate;
+	}
+
 	_initialPopulation() {
-		const net0 = new NeatNetwork(this.networkOptions, this.innovator, 'NT0');
+		const net0 = new NeatNetwork(this.networkOptions, 'NT0');
 		const population = [net0];
+		this.allGenes = net0.genes.map(g => g.id);
 		for(let i = 1; i < this.populationSize; i++) {
+			let baseGenes = net0.replicateGenes();
+			// Complexification
+			if(this.shouldComplexify)
+				baseGenes = this.splitGene(baseGenes);
+			if(this.shouldComplexify)
+				baseGenes = this.createNewConnection(baseGenes);
 			population.push(NeatNetwork.fromGenes(
-				net0.replicateGenes(),
+				baseGenes,
 				this.networkOptions,
-				this.innovator,
 				`NT${i}`
 			));
+	
 		}
 		return population;
 	}
@@ -75,6 +79,49 @@ class NeatManager {
 				});
 			}
 		});
+	}
+
+	innovation(geneId) {
+		return this.allGenes.indexOf(geneId) > -1
+			? this.allGenes.indexOf(geneId) : this.allGenes.push(geneId) - 1;
+	}
+
+	splitGene(genes) {
+		// Split random gene
+
+		const gIndex = Math.floor(Math.random() * genes.length);
+		const splitGene = genes[gIndex];
+
+		const newNode = new GANeuron(splitGene.id + 'S');
+		const innovations = [
+			this.innovation(Gene.idFor(splitGene.parent, newNode)),
+			this.innovation(Gene.idFor(newNode, splitGene.child))
+		];
+		const newGenes = [
+			new Gene(innovations[0], splitGene.parent, newNode, this.w),
+			new Gene(innovations[1] , newNode, splitGene.child, this.w)
+		];
+
+		console.log('Split', newGenes.map(g => g.id));
+		return [...genes.slice(0, gIndex), ...newGenes, ...genes.slice(gIndex + 1)];
+	}
+
+	createNewConnection(genes) {
+		// Add new gene
+		// TODO: handle existing connection better
+		const parent = genes[Math.floor(Math.random() * genes.length)].parent;
+		const child = genes[Math.floor(Math.random() * genes.length)].child;
+		const connectionExists = parent.id === child.id ||
+			parent.synapses.map(syn => syn.child.id).indexOf(child.id) > -1;
+		console.log('New Connection', parent.id, child.id, connectionExists);
+		if(!connectionExists) {
+			const geneId = Gene.idFor(parent, child);
+			const innovation = this.innovation(geneId);
+			return [...genes, new Gene(innovation, parent, child)];
+		} else {
+			console.log('Connection already exists, not pushed');
+			return genes;
+		}
 	}
 }
 
