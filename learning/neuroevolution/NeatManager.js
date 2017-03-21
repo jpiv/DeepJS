@@ -4,10 +4,10 @@ const rng = require('random-word');
 class NeatManager {
 	constructor(options={}) {
 		this.networkOptions = options.network;
-		this.allGenes = [];
+		this.fullGenome = [];
 		this.populationSize = options.populationSize || 0;
 		this.population = this._initialPopulation();
-		this.compatibilityThreshold = options.compatibilityThreshold || 0.1;
+		this.compatibilityThreshold = options.compatibilityThreshold || 1;
 		this.species = this.speciate();
 	}
 
@@ -18,7 +18,7 @@ class NeatManager {
 	_initialPopulation() {
 		const net0 = new NeatNetwork(this.networkOptions, 'NT0');
 		const population = [net0];
-		this.allGenes = net0.genes.map(g => g.id);
+		this.fullGenome = net0.genes.map(g => g.id);
 		for(let i = 1; i < this.populationSize; i++) {
 			let baseGenes = net0.replicateGenes();
 			// Complexification
@@ -36,6 +36,20 @@ class NeatManager {
 		return population;
 	}
 
+	mate() {
+		// Calculate adjusted fitness for each specicies
+		// Calculate proportion of total adjusted fitness
+		// Reproduce that amount of times
+	}
+
+	geneMatchingSet(genes) {
+		const matchinSet = this.fullGenome.map((id, i) =>
+			genes.find(g => g.innovation === i));
+		while(!matchinSet[matchinSet.length - 1])
+			matchinSet.pop();
+		return matchinSet;
+	}
+
 	speciate() {
 		const species = [];
 		// Excess gene weight
@@ -43,31 +57,49 @@ class NeatManager {
 		// Disjoint gene weight
 		const disjointW = 1;
 		// Average gene weight difference weight
-		const diffW = 1;
+		const meanWeightW = 1;
 		this.population.forEach(individual => {
 			let assignedSpecies;
-			species.forEach(spec => {
+			species.forEach((spec, speciesIndex) => {
 				// Choose random individual from species
 				const refIndividual = 
 					spec.population[Math.floor(Math.random() * spec.population.length)];
-				// Individual with less genes
-				// TODO: handle equal genes
-				const lowerIndividual = individual.genes.length < refIndividual.genes.length
-					? individual : refIndividual;
-				let excessGenes =
-					Math.abs(individual.genes.length - refIndividual.genes.length);
-				// Get number of disjoint genes
-				const disjointGenes = lowerIndividual.genes.reduce((acc, g, i) => {
-					const hasGene = !!refIndividual.genes.find(g2 =>
-						g2.innovation === g.innovation);
-					return hasGene ? acc : acc + 1;
-				}, 0);
-				console.log(excessGenes, disjointGenes, 'ex di');
+
+				const refMatchingSet = this.geneMatchingSet(refIndividual.genes);
+				const individualSet = this.geneMatchingSet(individual.genes)
+				// Matching set with less genes
+				const higherMatchingSet = refMatchingSet.length >= individualSet.length
+					? refMatchingSet : individualSet;
+				// Matchin set with more genes
+				const lowerMatchingSet = refMatchingSet.length < individualSet.length
+					? refMatchingSet : individualSet;
+
+				let excessGenes = higherMatchingSet.length - lowerMatchingSet.length;
+				let disjointGenes = 0;
+				let meanWeightDelta = 0;
+				console.log(higherMatchingSet.map(g => g && g.id))
+				console.log(lowerMatchingSet.map(g => g && g.id))
+				higherMatchingSet.forEach((id, i) => {
+					if(i < lowerMatchingSet.length) {
+						if(!(lowerMatchingSet[i] && higherMatchingSet[i]))
+							disjointGenes++;
+						else
+							meanWeightDelta = (meanWeightDelta +
+								Math.abs(higherMatchingSet[i].w - lowerMatchingSet[i].w)) / 2;
+					}
+				});
+
+				console.log(excessGenes, disjointGenes, meanWeightDelta, 'ex di');
+				// Number of genes in the larger genome
+				const N = higherMatchingSet.length;
 				// Calulate species distance
-				// const speciationNumber =
-				// 	(excessW * excessGenes) +
-				// 	(disjointW * disjointGenes) +
-				// 	(diffW * meanWeightDelta)
+				const speciesDistance =
+					(excessW * excessGenes) / N +
+					(disjointW * disjointGenes) / N +
+					(meanWeightW * meanWeightDelta);
+				console.log('SN:', speciesDistance);
+				assignedSpecies = speciesDistance <= this.compatibilityThreshold
+					? speciesIndex : null;
 			});
 
 			if(assignedSpecies)
@@ -79,11 +111,12 @@ class NeatManager {
 				});
 			}
 		});
+		return species;
 	}
 
 	innovation(geneId) {
-		return this.allGenes.indexOf(geneId) > -1
-			? this.allGenes.indexOf(geneId) : this.allGenes.push(geneId) - 1;
+		return this.fullGenome.indexOf(geneId) > -1
+			? this.fullGenome.indexOf(geneId) : this.fullGenome.push(geneId) - 1;
 	}
 
 	splitGene(genes) {
