@@ -17,6 +17,7 @@
     "mobx": "^3.1.0",
     "mobx-react": "^4.1.0",
     "poly-decomp": "^0.2.1",
+    "random-word": "^2.0.0",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
     "react-router": "^3.0.2",

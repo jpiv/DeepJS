@@ -12,5 +12,5 @@ if(debugArg > -1)
 // Trainer.time(() => trainer.learnDivision(650000));
 
 
-const NeatNetwork = require('./neuroevolution/NeatNetwork.js');
-const net = new NeatNetwork(2, 1);
+const NeatManager = require('./neuroevolution/NeatManager.js');
+const nm = new NeatManager({ populationSize: 2, network: { mutationRate: .75, inputs: 2 } });
