@@ -38,7 +38,7 @@ class BaseNetwork {
 					neuron.outputImpulse();
 			});
 		} else {
-			throw new Error('Invalid number of inputs');
+			throw new Error(`Invalid number of inputs ${inputs} ${this.inputNeurons.length}`);
 		}
 		Logger.log('out', results)
 		return results;

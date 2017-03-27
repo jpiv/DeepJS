@@ -22,16 +22,22 @@ class Gene extends BaseSynapse {
 		return parent.id + child.id;
 	}
 
+	setConnection(parent, child) {
+		this.parent = parent;
+		this.child = child;
+		this.parent.connect(this, this.child);
+	}
+
 	mutateWeight() {
 		// Random weight shift -0.1 to 0.1
 		const wShift = Math.random() * 0.2 - 0.1; 	
 		this.w += wShift;
-		console.log('Mutate weight:', this.w, this.id);
+		Logger.log(1, 'Mutate weight:', this.w, this.id);
 	}
 
 	mutateEnabled() {
 		this.enabled = !this.enabled;
-		console.log('Mutate enabled:', this.enabled, this.id);
+		Logger.log(1, 'Mutate enabled:', this.enabled, this.id);
 	}	
 
 	mutate() {
@@ -41,6 +47,10 @@ class Gene extends BaseSynapse {
 		];
 		const mutationIndex = Math.floor(Math.random() * mutations.length);
 		mutations[mutationIndex].call(this);
+	}
+
+	impulse(value) {
+		this.enabled && super.impulse(value);
 	}
 
 	clone() {
@@ -62,11 +72,25 @@ class GANeuron extends BaseNeuron {
 		const synIndex = this.synapses.indexOf(syn);
 		newChild._connectParent(syn);
 		this.synapses[synIndex] = syn;
+		syn.child._disconnectParent(syn);
 	}
 
-	disconnectParent(parentSyn) {
+	disconnect(syn) {
+		const synIndex = this.synapses.indexOf(syn);
+		this.synapses.splice(synIndex, 1);
+		syn.child._disconnectParent(syn);
+	}
+
+	_disconnectParent(parentSyn) {
 		const synIndex = this.parentSynapses.indexOf(parentSyn);
 		this.parentSynapses.splice(synIndex, 1);
+	}
+
+	// Remove all Synapses
+	clean() {
+		this.parentSynapses = [];
+		this.synapses = [];
+		return this;
 	}
 
 	clone() {
@@ -81,25 +105,41 @@ class NeatNetwork extends BaseNetwork {
 		const numInputs = options.inputs || 1;
 		const numOutputs = options.outputs || 1;
 		this.genes = _genes || this._constructGenes(numInputs, numOutputs);
-		this.inputNeurons = this.genes
-			.filter(g => !g.parent.parentSynapses.length)
-			.map(g => g.parent);
+		this.inputNeurons = this.getInputNeurons();
 		this.network = this._constructNetwork();
 		this.mutationRate = options.mutationRate || 0.01;
+		this.species = options.species;
+		this.fitnessFn = options.fitnessFn || Math.random;
+		this.fitnessGenerator = options.fitnessGenerator;
+		this.fitness = 0;
 		this.id = id;
-		console.log(this.id)
-		this.networkAction((n, layer, index) => console.log('\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
-		console.log('\tGenes:')
-		this.genes.forEach(g => console.log('\t', g.id, g.innovation))
+		Logger.log(1, this.id)
+		this.networkAction((n, layer, index) => Logger.log(1, '\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
+		Logger.log(1, '\tGenes:')
+		this.genes.forEach(g => Logger.log(1, '\t', g.id, g.innovation))
 	}
 
 	static fromGenes(genes, options={}, id) {
 		return new NeatNetwork(options, id, genes);
-	} 
+	}
+
+	static geneLayerMap(genes) {
+		const inputNeurons = genes
+			.filter(g => !g.parent.parentSynapses.length)
+			.map(g => g.parent);
+		return NeatNetwork.constructNetwork(inputNeurons);
+	}
+
+	getInputNeurons() {
+		return this.genes
+			.filter(g => !g.parent.parentSynapses.length)
+			.map(g => g.parent);
+	}
 
 	get shouldMutate() {
 		return Math.random() < this.mutationRate;
 	}
+
 
 	replicateGenes() {
 		const newGenes = this.genes.map(g => {
@@ -112,7 +152,31 @@ class NeatNetwork extends BaseNetwork {
 		return newGenes;
 	}
 
+	getContinuousFitness() {
+		const iterator = this.fitnessGenerator();
+		for(let inputs of iterator) {
+			const outputs = this.sendInput(inputs.slice(0, this.inputNeurons.length));
+			this.fitness = iterator.next(outputs).value;
+		}
+		return this.fitness;
+	}
+
 	_constructNetwork() {
+		return NeatNetwork.constructNetwork(this.inputNeurons);
+	}
+
+	_constructGenes(inputs, outputs) {
+		const genes = [];
+		for(let i = 0; i < outputs; i++) {
+			for(let j = 0; j < inputs; j++) {
+				const child = genes[0] ? genes[0].child : null;
+				genes.push(new Gene(j + (i * j), null, child));
+			}
+		}
+		return genes;
+	}
+
+	static constructNetwork(inputNeurons) {
 		const neuronLayerMap = {};
 		const network = [];
 		const traverseNetwork = (neuron, layerIndex=0) => {
@@ -125,7 +189,7 @@ class NeatNetwork extends BaseNetwork {
 				traverseNetwork(syn.child, layerIndex + 1));
 
 		};
-		this.inputNeurons.forEach(n => traverseNetwork(n));
+		inputNeurons.forEach(n => traverseNetwork(n));
 		Object.keys(neuronLayerMap).forEach(key => {
 			const nLayerMap = neuronLayerMap[key]
 			const layer = network[nLayerMap.layer];
@@ -133,17 +197,6 @@ class NeatNetwork extends BaseNetwork {
 				[...layer, nLayerMap.neuron] : [nLayerMap.neuron];
 		});
 		return network;
-	}
-
-	_constructGenes(inputs, outputs) {
-		const genes = [];
-		for(let i = 0; i < outputs; i++) {
-			for(let j = 0; j < inputs; j++) {
-				const child = genes[0] ? genes[0].child : null;
-				genes.push(new Gene(j + (i * j), null, child));
-			}
-		}
-		return genes;
 	}
 }
 

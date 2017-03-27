@@ -22,6 +22,8 @@ const randomSampleGenerator = function* (size, dimensions, range, offset) {
 };
 
 module.exports = {
+	randomSampleGenerator,
+	binarySampleGenerator,
 	mutualXOR(size) {
 		const samples = sampleGenerator(size, 3);
 		return Array.from(Array(size).keys(), i => {
