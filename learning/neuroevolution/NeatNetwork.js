@@ -29,8 +29,8 @@ class Gene extends BaseSynapse {
 	}
 
 	mutateWeight() {
-		// Random weight shift -0.1 to 0.1
-		const wShift = Math.random() * 0.2 - 0.1; 	
+		// Random weight shift -0.5 to 0.5
+		const wShift = Math.random() - 0.5; 	
 		this.w += wShift;
 		Logger.log(1, 'Mutate weight:', this.w, this.id);
 	}
@@ -59,8 +59,10 @@ class Gene extends BaseSynapse {
 }
 
 class GANeuron extends BaseNeuron {
-	constructor(id) {
+	constructor(id, isInput, isOutput) {
 		super(null, sigmoid, sigmoidPrime, null, null, id);
+		this.isInput = isInput || false;
+		this.isOutput = isOutput || false;
 	}
 
 	connect(syn, neuron) {
@@ -94,7 +96,7 @@ class GANeuron extends BaseNeuron {
 	}
 
 	clone() {
-		return new GANeuron(this.id);
+		return new GANeuron(this.id, this.isInput, this.isOutput);
 	}
 }
 
@@ -113,10 +115,13 @@ class NeatNetwork extends BaseNetwork {
 		this.fitnessGenerator = options.fitnessGenerator;
 		this.fitness = 0;
 		this.id = id;
-		Logger.log(1, this.id)
-		this.networkAction((n, layer, index) => Logger.log(1, '\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
-		Logger.log(1, '\tGenes:')
-		this.genes.forEach(g => Logger.log(1, '\t', g.id, g.innovation))
+	}
+
+	logNetwork(level=1) {
+		Logger.log(level, this.id)
+		this.networkAction((n, layer, index) => Logger.log(level, '\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
+		Logger.log(level, '\tGenes:')
+		this.genes.forEach(g => Logger.log(level, '\t', g.id, g.innovation))
 	}
 
 	static fromGenes(genes, options={}, id) {
@@ -124,16 +129,35 @@ class NeatNetwork extends BaseNetwork {
 	}
 
 	static geneLayerMap(genes) {
-		const inputNeurons = genes
-			.filter(g => !g.parent.parentSynapses.length)
-			.map(g => g.parent);
+		var inputNeurons = {};
+		var outputNeurons = {};
+		genes.forEach(g => {
+			if(g.parent.isInput)
+				inputNeurons[g.parent.id] = g.parent;
+			if(g.child.isOutput)
+				outputNeurons[g.child.id] = g.child;
+		});
+		inputNeurons = Object.keys(inputNeurons).map(id => inputNeurons[id]);
+		outputNeurons = Object.keys(outputNeurons).map(id => outputNeurons[id]);
 		return NeatNetwork.constructNetwork(inputNeurons);
 	}
 
+	setupNeuronGroups() {
+		const inputNeurons = {};
+		const outputNeurons = {};
+		this.genes.forEach(g => {
+			if(g.parent.isInput)
+				inputNeurons[g.parent.id] = g.parent;
+			if(g.child.isOutput)
+				outputNeurons[g.child.id] = g.child;
+		});
+		this.inputNeurons = Object.keys(inputNeurons).map(id => inputNeurons[id]);
+		this.outputNeurons = Object.keys(outputNeurons).map(id => outputNeurons[id]);
+	}
+
 	getInputNeurons() {
-		return this.genes
-			.filter(g => !g.parent.parentSynapses.length)
-			.map(g => g.parent);
+		this.setupNeuronGroups();
+		return this.inputNeurons;
 	}
 
 	get shouldMutate() {
@@ -148,7 +172,6 @@ class NeatNetwork extends BaseNetwork {
 				newG.mutate();	
 			return newG;
 		});
-
 		return newGenes;
 	}
 
@@ -173,6 +196,10 @@ class NeatNetwork extends BaseNetwork {
 				genes.push(new Gene(j + (i * j), null, child));
 			}
 		}
+		genes.forEach(g => {
+			g.parent.isInput = true;
+			g.child.isOutput = true;
+		});
 		return genes;
 	}
 

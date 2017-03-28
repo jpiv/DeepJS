@@ -11,6 +11,12 @@ class NeatManager {
 		this.population = this._initialPopulation();
 		this.compatibilityThreshold = options.compatibilityThreshold || 1;
 		this.complexificationRate = options.complexificationRate || .1;
+		// Excess gene weight
+		this.excessW = options.excessW || 1;
+		// Disjoint gene weight
+		this.disjointW = options.disjointW || 1;
+		// Average gene weight difference weight
+		this.meanWeightW = options.meanWeightW || 1;
 		this.species = this.speciate();
 		Logger.log(1, 'Species:');
 		this.species.map(s => Logger.log(1, '\t', s.name, s.population.length));
@@ -54,6 +60,7 @@ class NeatManager {
 				Logger.log(0, '\t', n.id, n.fitness);
 			});
 		});
+		this.species[0].population[this.species[0].population.length - 1].logNetwork(0);
 	}
 	populationFitness() {
 		this.population.forEach(net =>
@@ -80,12 +87,17 @@ class NeatManager {
 			// Array of species population fitness sorted by fitness
 			const popByFitness = spec.population
 				.sort((n1, n2) => n1.fitness - n2.fitness);
-			const totalSpecFitness = popByFitness.reduce((acc, n) => acc + n.fitness, 0);
+
+			const totalSpecFitness = popByFitness.reduce((acc, n, i) =>
+				acc + n.fitness * Math.pow(2, i), 0);
 			// Array of species pobabilities to reproduce
-			const popByProb = popByFitness.map(n => n.fitness / totalSpecFitness);
+			const popByProb = popByFitness.map((n, i) =>
+				(n.fitness * Math.pow(2, i)) / totalSpecFitness);
 			const createSelectionSet = () => {
 				var lastProb = popByProb[0];
 				return popByProb.map((prob, speciesIndex) => {
+					if(popByProb.length === 1)
+						return 1;
 					if(speciesIndex === 0)
 						return prob;
 					lastProb = lastProb + prob;
@@ -93,9 +105,9 @@ class NeatManager {
 				});
 			};
 			const probSelectionSet = createSelectionSet();
-			// Logger.log(1, 'Fitness:', popByFitness.map(i => i.fitness))
+			Logger.log(1, 'Fitness:', popByFitness.map(i => i.fitness))
 			Logger.log(1, 'Prob:', popByProb);
-			// Logger.log(1, 'Prob Selection:', probSelectionSet)
+			Logger.log(3, 'Prob Selection:', probSelectionSet)
 			for(let i = 0; i < speciesOffspringAmounts[speciesIndex]; i++) {
 				const getParent = () => {
 					const outcome = Math.random();
@@ -206,12 +218,6 @@ class NeatManager {
 
 	speciate(respeciate=false) {
 		var lastSpecies = respeciate ? this.species : [];
-		// Excess gene weight
-		const excessW = 1;
-		// Disjoint gene weight
-		const disjointW = 1;
-		// Average gene weight difference weight
-		const meanWeightW = 1;
 		const species = lastSpecies.map(s => {
 			return { name: s.name, population: [] };
 		});
@@ -229,8 +235,8 @@ class NeatManager {
 				let excessGenes = 0;
 				let disjointGenes = 0;
 				let meanWeightDelta = 0;
-				Logger.log(2, matchingSets.higher.map(g => g && g.id))
-				Logger.log(2, matchingSets.lower.map(g => g && g.id))
+				Logger.log(1, matchingSets.higher.map(g => g && g.id))
+				Logger.log(1, matchingSets.lower.map(g => g && g.id))
 				matchingSets.higher.forEach((id, i) => {
 					if(i < matchingSets.lower.length) {
 						if(!!matchingSets.lower[i] ^ !!matchingSets.higher[i])
@@ -247,10 +253,10 @@ class NeatManager {
 				const N = matchingSets.higher.length;
 				// Calulate species distance
 				const speciesDistance =
-					(excessW * excessGenes) / N +
-					(disjointW * disjointGenes) / N +
-					(meanWeightW * meanWeightDelta);
-				Logger.log(2, 'SN:', speciesDistance);
+					(this.excessW * excessGenes) / N +
+					(this.disjointW * disjointGenes) / N +
+					(this.meanWeightW * meanWeightDelta);
+				Logger.log(1, 'SN:', speciesDistance);
 				assignedSpecies = speciesDistance <= this.compatibilityThreshold
 					? speciesIndex : null;
 			});
