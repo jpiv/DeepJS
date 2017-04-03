@@ -53,7 +53,7 @@ class BaseNeuron {
 		this._errorSum += error;
 		this.error = this._loss(this._errorSum, this.sum)
 	}
-
+	
 	_connectParent(synapse) {
 		this.parentSynapses.push(synapse);
 	}

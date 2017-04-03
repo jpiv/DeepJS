@@ -5,7 +5,9 @@ const rng = require('random-word');
 class NeatManager {
 	constructor(options={}) {
 		this.logLevel = 0;
-		this.networkOptions = options.network;
+		this.networkOptions = options.network || {};
+		this.networkOptions.inputs = options.inputs || 2;
+		this.networkOptions.outputs = options.outputs || 1;
 		this.fullGenome = [];
 		this.populationSize = options.populationSize || 0;
 		this.population = this._initialPopulation();
@@ -27,12 +29,11 @@ class NeatManager {
 	}
 
 	_initialPopulation() {
-		const net0 = new NeatNetwork(this.networkOptions, 'NT0');
-		const population = [net0];
-		this.fullGenome = net0.genes.map(g => g.id);
-		for(let i = 1; i < this.populationSize; i++) {
-			let baseGenes = net0.replicateGenes();
-			population.push(this.makeNetwork(baseGenes, `NT${i}`));
+		const population = [];
+		for(let i = 0; i < this.populationSize; i++) {
+			population.push(this.makeNetwork(null, `NT${i}`));
+			if(!i)
+				this.fullGenome = population[i].genes.map(g => g.id);
 		}
 		return population;
 	}
@@ -42,15 +43,29 @@ class NeatManager {
 
 	makeNetwork(genes, id) {
 		// Complexification
-		if(this.shouldComplexify)
-			genes = this.splitGene(genes);
-		if(this.shouldComplexify)
-			genes = this.createNewConnection(genes);
-		return NeatNetwork.fromGenes(
+		if(!genes || !genes.length)
+			return NeatNetwork.fromGenes(
+				null,
+				this.networkOptions,
+				id
+			);
+		else if(!NeatNetwork.isViable(
 			genes,
-			this.networkOptions,
-			id
-		);
+			this.networkOptions.inputs,
+			this.networkOptions.outputs
+		))
+			return null;
+		else {
+			if(this.shouldComplexify)
+				genes = this.splitGene(genes);
+			else if(this.shouldComplexify)
+				genes = this.createNewConnection(genes);
+			return NeatNetwork.fromGenes(
+				genes,
+				this.networkOptions,
+				id
+			);
+		}
 	}
 
 	logSpeciesFitness() {
@@ -60,11 +75,14 @@ class NeatManager {
 				Logger.log(0, '\t', n.id, n.fitness);
 			});
 		});
-		this.species[0].population[this.species[0].population.length - 1].logNetwork(0);
+		this.species.length
+			&& this.species[0].population[this.species[0].population.length - 1].logNetwork(0);
 	}
+
 	populationFitness() {
-		this.population.forEach(net =>
-			net.getContinuousFitness());
+		this.population.forEach(net => {
+			const f = net.getContinuousFitness()
+		});
 	}
 
 	advanceGeneration() {
@@ -77,7 +95,7 @@ class NeatManager {
 		const totalFitness = speciesFitnesses.reduce((acc, fit) => acc + fit, 0);
 		// Proportional amount of reproductions allowed per species
 		const speciesOffspringAmounts = speciesFitnesses.map(fitness =>
-			Math.round((fitness / totalFitness) * this.populationSize));
+			Math.floor((fitness / totalFitness) * this.populationSize));
 		Logger.log(1, 'Species Fitnesses:', speciesFitnesses, 'total:', totalFitness);
 		Logger.log(1, 'Offspring', speciesOffspringAmounts);
 		// Calculate adjusted fitness for each specicies
@@ -119,19 +137,14 @@ class NeatManager {
 							);
 				};
 				Logger.log(1, popByFitness.map(n => [n.id, n.fitness]))
-				var child;
-				var attempt = 0;
-				do {
-					const parentA = getParent();
-					// TODO: Remove from set instead of Retry
-					// TODO: Only mate with self if species size 1
-					var parentB = getParent();
-					Logger.log(1, 'Parents:', parentA.id, parentB.id);
-					child = this.reproduce(parentA, parentB, `N${childIndex}`)
-					attempt++
-				} while(child.getInputNeurons().length !== this.networkOptions.inputs && attempt < this.populationSize)
+				const parentA = getParent();
+				// TODO: Remove from set instead of Retry
+				// TODO: Only mate with self if species size 1
+				var parentB = getParent();
+				Logger.log(1, 'Parents:', parentA.id, parentB.id);
+				const child = this.reproduce(parentA, parentB, `N${childIndex}`)
+					|| this.makeNetwork(null, `N${childIndex}`);
 				nextGeneration.push(child);
-				childIndex++;
 			}
 		});
 		this.population = nextGeneration;
@@ -147,15 +160,15 @@ class NeatManager {
 			? (networkA.fitness > networkB.fitness
 				? matchingSets.A : matchingSets.B) : null;
 
-		Logger.log(1, 'Reproducing', networkA.id, networkB.id);
+		Logger.log(4, 'Reproducing', networkA.id, networkB.id);
 		const splitPoint = Math.floor(Math.random() * matchingSets.lower.length + 1) - 1;
-		Logger.log(1, 'Split point:', splitPoint);
+		Logger.log(4, 'Split point:', splitPoint);
 
 		const geneParents = [];
-		Logger.log(1, strongerSet === matchingSets.B, 'Stronger is B')
-		Logger.log(1, 'fitness:', networkA.fitness, networkB.fitness, matchingSets.A === matchingSets.lower, 'A is lower');
+		Logger.log(4, strongerSet === matchingSets.B, 'Stronger is B')
+		Logger.log(4, 'fitness:', networkA.fitness, networkB.fitness, matchingSets.A === matchingSets.lower, 'A is lower');
 		// Set of genes from both parents
-		const offspringGenome = matchingSets.higher.map((gene, i) => {
+		var offspringGenome = matchingSets.higher.map((gene, i) => {
 			if(!matchingSets.lower[i] || !gene) {
 				if(strongerSet) {
 					geneParents.push('stronger');
@@ -173,20 +186,14 @@ class NeatManager {
 				geneParents.push('higher')
 				return matchingSets.higher[i];
 			}
-		}).filter(gene => !!gene);
-		// Scrub genes to consolidate neurons 
-		const neuronHash = {};
-		offspringGenome.forEach(gene => {
-			neuronHash[gene.parent.id] = gene.parent.clean();
-			neuronHash[gene.child.id] = gene.child.clean();
 		});
-		offspringGenome.forEach(gene =>
-			gene.setConnection(neuronHash[gene.parent.id], neuronHash[gene.child.id]));
-		Logger.log(1, geneParents)
-		Logger.log(1, matchingSets.A.map(g => g && g.id))
-		Logger.log(1, matchingSets.B.map(g => g && g.id))
-		Logger.log(1, offspringGenome.map(g => g && g.id))
-		const offspring = this.makeNetwork(offspringGenome, id);
+
+		offspringGenome = NeatNetwork.normalizeGenome(offspringGenome);
+		Logger.log(4, geneParents)
+		Logger.log(4, matchingSets.A.map(g => g && g.id))
+		Logger.log(4, matchingSets.B.map(g => g && g.id))
+		Logger.log(4, offspringGenome.map(g => g && g.id))
+		const offspring = offspringGenome.length && this.makeNetwork(offspringGenome, id);
 		return offspring;
 	}
 
@@ -281,37 +288,61 @@ class NeatManager {
 	}
 
 	splitGene(genes) {
-		if(!genes.length)
-			return genes;
 		// Split random gene
 		const gIndex = Math.floor(Math.random() * genes.length);
 		const splitGene = genes[gIndex];
 
+		// Disconnect split gene from it's parent and child
 		splitGene.parent.disconnect(splitGene);
 
+		// Create new node for new genes to connect to
 		const newNode = new GANeuron(splitGene.id + 'S');
 		const innovations = [
 			this.innovation(Gene.idFor(splitGene.parent, newNode)),
 			this.innovation(Gene.idFor(newNode, splitGene.child))
 		];
 		const newGenes = [
-			new Gene(innovations[0], splitGene.parent, newNode, this.w),
-			new Gene(innovations[1] , newNode, splitGene.child, this.w)
+			// Gene from old parent to new middle node
+			new Gene({
+				innovation: innovations[0],
+				parent: splitGene.parent,
+				child: newNode,
+				weight: this.w,
+				isInput: splitGene.parent.isInput,
+				isOutput: false
+			}),
+			// Gene from new middle node to old child
+			new Gene({
+				innovation: innovations[1],
+				parent: newNode,
+				child: splitGene.child,
+				weight: this.w,
+				isInput: false,
+				isOutput: splitGene.child.isOutput
+			})
 		];
 
 		Logger.log(1, 'Split', newGenes.map(g => g.id));
-		return [...genes.slice(0, gIndex), ...newGenes, ...genes.slice(gIndex + 1)];
+		// Create new genome with new genes in place of the split gene
+		return [
+			...genes.slice(0, gIndex),
+			...newGenes,
+			...genes.slice(gIndex + 1)
+		];
 	}
 
 	createNewConnection(genes) {
 		// Add new gene
-		if(!genes.length)
-			return genes;
 		// TODO: handle existing connection better
 		const geneLayerMap = NeatNetwork.geneLayerMap(genes);
 		const parentLayerIndex = Math.floor(Math.random() * (geneLayerMap.length - 1));
 		const parentLayer = geneLayerMap[parentLayerIndex];
-		const parent = parentLayer[Math.floor(Math.random() * parentLayer.length)];
+		var parent;
+		try {
+		 parent = parentLayer[Math.floor(Math.random() * parentLayer.length)];
+		} catch(e) {
+			console.log(genes, e, geneLayerMap.map(g => g.map(i => i.id)))
+		}
 		const childSubMap = geneLayerMap.slice(parentLayerIndex + 1);
 		const childLayerIndex = Math.floor(Math.random() * childSubMap.length);
 		const childLayer = childSubMap[childLayerIndex];
@@ -323,7 +354,7 @@ class NeatManager {
 		if(!connectionExists) {
 			const geneId = Gene.idFor(parent, child);
 			const innovation = this.innovation(geneId);
-			return [...genes, new Gene(innovation, parent, child)];
+			return [...genes, new Gene({ innovation, parent, child })];
 		} else {
 			Logger.log(1, 'Connection already exists, not pushed');
 			return genes;
