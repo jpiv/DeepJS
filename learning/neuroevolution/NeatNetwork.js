@@ -32,7 +32,7 @@ class Gene extends BaseSynapse {
 
 	mutateWeight() {
 		// Random weight shift -5 to 5
-		const wShift = Math.random() * 10.0 - 5; 	
+		const wShift = Math.random() * .2 - .1; 	
 		this.w += wShift;
 		Logger.log(1, 'Mutate weight:', this.w, this.id);
 	}
@@ -237,23 +237,23 @@ class NeatNetwork extends BaseNetwork {
 		var numLayers = 0;
 		// HANDLE BIAS NEURONS
 		const traverseNetwork = (neuron, action, layerIndex=0, reverse=false) => {
-			action(n, layerIndex);
+			action(neuron, layerIndex);
 			neuron.parentSynapses.forEach(syn =>
-				traverseNetwork(syn.parent, action, reverse ? layerIndex - 1 : layerIndex + 1));
+				traverseNetwork(syn.parent, action, reverse ? layerIndex - 1 : layerIndex + 1, reverse));
 		};
 		const depthAction = (n, layerIndex) => {
 			numLayers = Math.max(numLayers, layerIndex);
 		};
 		const action = (neuron, layerIndex) => {
-			var layer = Math.max(
-				neuronLayerMap[neuron.id] ? neuronLayerMap[neuron.id].layer : numLayers - 1,
-				numLayers - 1 - layerIndex
-			);
-
+			const layer = neuron.isInput ? 0
+				: Math.min(
+					neuronLayerMap[neuron.id] ? neuronLayerMap[neuron.id].layer : layerIndex,
+					layerIndex
+				);
 			neuronLayerMap[neuron.id] = { neuron, layer };
 		};
 		outputNeurons.forEach(n => traverseNetwork(n, depthAction));
-		outputNeurons.forEach(n => traverseNetwork(n, action, numLayers - 1))
+		outputNeurons.forEach(n => traverseNetwork(n, action, numLayers, true))
 		Object.keys(neuronLayerMap).forEach(key => {
 			const nLayerMap = neuronLayerMap[key]
 			const layer = network[nLayerMap.layer];

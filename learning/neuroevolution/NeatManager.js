@@ -82,6 +82,12 @@ class NeatManager {
 	populationFitness() {
 		this.population.forEach(net => {
 			const f = net.getContinuousFitness()
+			if(!f) {
+				Logger.LOG_LEVEL = 1;
+				Logger.log('Fitness Failed')
+				net.logNetwork();
+				Logger.LOG_LEVEL = 0;
+			}
 		});
 	}
 
@@ -339,7 +345,7 @@ class NeatManager {
 		const parentLayer = geneLayerMap[parentLayerIndex];
 		var parent;
 		try {
-		 parent = parentLayer[Math.floor(Math.random() * parentLayer.length)];
+			parent = parentLayer[Math.floor(Math.random() * parentLayer.length)];
 		} catch(e) {
 			console.log(genes, e, geneLayerMap.map(g => g.map(i => i.id)))
 		}

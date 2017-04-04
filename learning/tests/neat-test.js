@@ -29,7 +29,41 @@ const make3LayerGenes = () => {
 		parent: a2b1.child,
 		child: a1c1.child
 	});
-	return [a1c1, a2c1, a2b1];
+	return [a1c1, a2c1, a2b1, b1c1];
+};
+
+const make3LayerBiasGenes = () => {
+	const a1c1 = new Gene({
+		innovation: 1,
+		isInput: true,
+		isOutput: true
+	});
+	const a2c1 = new Gene({
+		innovation: 2,
+		isInput: true,
+		isOutput: true,
+		child: a1c1.child
+	});
+	const a2b1 = new Gene({
+		innovation: 3,
+		isInput: true,
+		isOutput: true,
+		parent: a1c1.parent,
+	});
+	const b1c1 = new Gene({
+		innovation: 4,
+		isInput: true,
+		isOutput: true,
+		parent: a2b1.child,
+		child: a1c1.child
+	});
+	const b2c1 = new Gene({
+		innovation: 4,
+		isInput: false,
+		isOutput: true,
+		child: a1c1.child
+	});
+	return [a1c1, a2c1, a2b1, b1c1, b2c1];
 };
 
 describe('Creating Networks', () => {
@@ -60,7 +94,6 @@ describe('Creating Networks', () => {
 		const genes = make3LayerGenes();
 		const net = NeatNetwork.fromGenes(genes);
 		expect(net.network.length).to.equal(3);
-		console.log(net.network[1])
 		expect(net.network[1].length).to.equal(1);
 		expect(net.network[2].length).to.equal(1)
 	});
@@ -70,6 +103,15 @@ describe('Creating Networks', () => {
 		const genes = [a];
 		const net = NeatNetwork.fromGenes(genes);
 		expect(net.network.length).to.be.ok;
+	});
+
+	it('Should create a network with 3 layers and 1 bias neuron', () => {
+		const genes = make3LayerBiasGenes();
+		const net = NeatNetwork.fromGenes(genes);
+		expect(net.network.length).to.equal(3);
+		expect(net.network[0].length).to.equal(2);
+		expect(net.network[1].length).to.equal(2);
+		expect(net.network[2].length).to.equal(1);
 	});
 });
 
