@@ -29,8 +29,9 @@ class BaseNetwork {
 		var results = [];
 		if(inputs && inputs.length === this.inputNeurons.length) {
 			this.networkAction((neuron, layer, index) => {
-				if(this.inputNeurons.indexOf(neuron) > -1)
-					neuron.inputImpulse(inputs[index]);
+				const inputIndex = this.inputNeurons.indexOf(neuron);
+				if(inputIndex > -1)
+					neuron.inputImpulse(inputs[inputIndex]);
 				
 				if(this.outputNeurons.indexOf(neuron) > -1)
 					results.push(neuron.outputImpulse());

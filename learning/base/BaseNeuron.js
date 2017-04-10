@@ -1,5 +1,5 @@
 const BaseSynapse = require('./BaseSynapse.js');
-const { log } = require('../log.js');
+const Logger = require('../log.js');
 
 class BaseNeuron {
 	constructor(SynapseClass=BaseSynapse, activationFn, activationPrime, lossFn, lossP, id) {
@@ -38,7 +38,7 @@ class BaseNeuron {
 
 	// Update sum of synapses
 	outputImpulse() {
-		log(this.id, 'sum', this.sum, this.output);
+		Logger.log(1, this.id, 'sum', this.sum, this.output);
 		this.synapses.forEach(s => s.impulse(this.output));
 		return this.output;
 	}
@@ -49,7 +49,7 @@ class BaseNeuron {
 	}
 
 	updateError(error, out) {
-		log(this.id, 'update error', error, this.error)
+		Logger.log(1, this.id, 'update error', error, this.error)
 		this._errorSum += error;
 		this.error = this._loss(this._errorSum, this.sum)
 	}

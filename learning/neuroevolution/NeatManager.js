@@ -28,6 +28,10 @@ class NeatManager {
 		return Math.random() < this.complexificationRate;
 	}
 
+	get shouldMutate() {
+		return Math.random() < this.networkOptions.mutationRate;
+	}
+
 	_initialPopulation() {
 		const population = [];
 		for(let i = 0; i < this.populationSize; i++) {
@@ -58,7 +62,9 @@ class NeatManager {
 		else {
 			if(this.shouldComplexify)
 				genes = this.splitGene(genes);
-			else if(this.shouldComplexify)
+			if(this.shouldComplexify)
+				genes = this.addNeuron(genes);
+			if(this.shouldComplexify)
 				genes = this.createNewConnection(genes);
 			return NeatNetwork.fromGenes(
 				genes,
@@ -82,12 +88,6 @@ class NeatManager {
 	populationFitness() {
 		this.population.forEach(net => {
 			const f = net.getContinuousFitness()
-			if(!f) {
-				Logger.LOG_LEVEL = 1;
-				Logger.log('Fitness Failed')
-				net.logNetwork();
-				Logger.LOG_LEVEL = 0;
-			}
 		});
 	}
 
@@ -341,18 +341,17 @@ class NeatManager {
 		// Add new gene
 		// TODO: handle existing connection better
 		const geneLayerMap = NeatNetwork.geneLayerMap(genes);
-		const parentLayerIndex = Math.floor(Math.random() * (geneLayerMap.length - 1));
-		const parentLayer = geneLayerMap[parentLayerIndex];
-		var parent;
-		try {
-			parent = parentLayer[Math.floor(Math.random() * parentLayer.length)];
-		} catch(e) {
-			console.log(genes, e, geneLayerMap.map(g => g.map(i => i.id)))
-		}
+		const {
+			layerIndex: parentLayerIndex,
+			geneIndex: parentIndex 
+		} = this._randomGeneIndex(true, false, geneLayerMap);
+		const parent = geneLayerMap[parentLayerIndex][parentIndex];
 		const childSubMap = geneLayerMap.slice(parentLayerIndex + 1);
-		const childLayerIndex = Math.floor(Math.random() * childSubMap.length);
-		const childLayer = childSubMap[childLayerIndex];
-		const child = childLayer[Math.floor(Math.random() * childLayer.length)];
+		const {
+			layerIndex: childLayerIndex,
+			geneIndex: childIndex 
+		} = this._randomGeneIndex(true, true, childSubMap);
+		const child = childSubMap[childLayerIndex][childIndex];
 
 		const connectionExists = parent.id === child.id ||
 			parent.synapses.map(syn => syn.child.id).indexOf(child.id) > -1;
@@ -365,6 +364,32 @@ class NeatManager {
 			Logger.log(1, 'Connection already exists, not pushed');
 			return genes;
 		}
+	}
+
+	addNeuron(genes) {
+		const glMap = NeatNetwork.geneLayerMap(genes);
+		const { layerIndex, geneIndex } = this._randomGeneIndex(true, false, glMap);
+		const baseNeuron = glMap[layerIndex][geneIndex];
+		const childNeuron = baseNeuron.synapses[
+			Math.floor(Math.random() * baseNeuron.synapses.length)].child;
+		const parentNeuron = new GANeuron(childNeuron.id + 'B');
+		const geneId = Gene.idFor(parentNeuron, childNeuron);
+		const innovation = this.innovation(geneId);
+		const newGene = new Gene({
+			innovation: innovation,
+			parent: parentNeuron,
+			child: childNeuron
+		});
+		return [...genes, newGene];
+	}
+
+	_randomGeneIndex(includeInput, includeOutput, glMap) {
+		const range = glMap.length - (Number(!includeInput) + Number(!includeOutput));
+		const offset = Number(!includeInput);
+		const layerIndex = Math.floor(Math.random() * range + offset);
+		const layer = glMap[layerIndex];
+		const geneIndex = Math.floor(Math.random(layer.length));
+		return { layerIndex, geneIndex };
 	}
 }
 
