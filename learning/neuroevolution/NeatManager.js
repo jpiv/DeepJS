@@ -67,8 +67,8 @@ class NeatManager {
 				NeatNetwork.geneLayerMap(genes)
 			}
 			if(this.shouldComplexify) {
-				// genes = this.addNeuron(genes);
-				// NeatNetwork.geneLayerMap(genes)
+				genes = this.addNeuron(genes);
+				NeatNetwork.geneLayerMap(genes)
 			}
 			if(this.shouldComplexify) {
 				genes = this.createNewConnection(genes);
@@ -91,6 +91,8 @@ class NeatManager {
 		});
 		this.species.length
 			&& this.species[0].population[this.species[0].population.length - 1].logNetwork(0);
+		Logger.log(0, this.species.length
+			&& this.species[0].population[this.species[0].population.length - 1].fitness);
 	}
 
 	populationFitness() {
@@ -220,6 +222,8 @@ class NeatManager {
 		Logger.log(4, matchingSets.A.map(g => g && g.id))
 		Logger.log(4, matchingSets.B.map(g => g && g.id))
 		Logger.log(4, offspringGenome.map(g => g && g.id))
+		if(!offspringGenome.length)
+			console.log('NO GENES')
 		const offspring = offspringGenome.length && this.makeNetwork(offspringGenome, id);
 		return offspring;
 	}
@@ -228,11 +232,11 @@ class NeatManager {
 		Logger.log(5, this.fullGenome, genesB.map(g=>g.id), genesA.map(g=>g.id))
 		const matchingSetA = this.fullGenome.map((id, i) =>
 			genesA.find(g => g.id === id));
-		while(!matchingSetA[matchingSetA.length - 1])
+		while(matchingSetA.length && !matchingSetA[matchingSetA.length - 1])
 			matchingSetA.pop();
 		const matchingSetB = this.fullGenome.map((id, i) =>
 			genesB.find(g => g.id === id));
-		while(!matchingSetB[matchingSetB.length - 1])
+		while(matchingSetB.length && !matchingSetB[matchingSetB.length - 1])
 			matchingSetB.pop();
 		// Matching set with more or less genes
 		let higherMatchingSet = matchingSetB;
@@ -380,7 +384,6 @@ class NeatManager {
 			geneIndex: childIndex 
 		} = this._randomGeneIndex(true, true, childSubMap);
 		const child = childSubMap[childLayerIndex][childIndex];
-		console.log("HERE", child.id, parent.id)
 
 		const connectionExists = parent.id === child.id ||
 			parent.synapses.map(syn => syn.child.id).indexOf(child.id) > -1;

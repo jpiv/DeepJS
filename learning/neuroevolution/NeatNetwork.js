@@ -31,8 +31,8 @@ class Gene extends BaseSynapse {
 	}
 
 	mutateWeight() {
-		// Random weight shift -5 to 5
-		const wShift = Math.random() * .1 - .05; 	
+		// Random weight shift -.5 to .5
+		const wShift = Math.random() * 1 - .5;
 		this.w += wShift;
 		Logger.log(1, 'Mutate weight:', this.w, this.id);
 	}
@@ -60,7 +60,7 @@ class Gene extends BaseSynapse {
 			innovation: this.innovation,
 			parent: this.parent.clone(),
 			child: this.child.clone(),
-			weight: this.weight,
+			weight: this.w,
 			id: this.id
 		});
 	}
@@ -130,7 +130,7 @@ class NeatNetwork extends BaseNetwork {
 		Logger.log(level, this.id)
 		this.networkAction((n, layer, index) => Logger.log(level, '\t', n.isInput, n.isOutput, '\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
 		Logger.log(level, '\tGenes:')
-		this.genes.forEach(g => Logger.log(level, '\t', g.id, g.innovation))
+		this.genes.forEach(g => Logger.log(level, '\t', g.id, g.w))
 	}
 
 	static fromGenes(genes, options={}, id) {
@@ -149,7 +149,7 @@ class NeatNetwork extends BaseNetwork {
 			}
 			return !!gene;
 		});
-		console.log('hash', Object.keys(neuronHash), filteredGenome.map(g => g.id))
+		Logger.log(6, 'hash', Object.keys(neuronHash), filteredGenome.map(g => g.id))
 		// recreate all connections on new neurons 
 		filteredGenome.forEach(gene =>
 			gene.setConnection(neuronHash[gene.parent.id], neuronHash[gene.child.id]));
@@ -167,13 +167,8 @@ class NeatNetwork extends BaseNetwork {
 
 	static isViable(genes, numInputs, numOutputs) {
 		const neuronGroups = NeatNetwork.getNeuronGroups(genes);
-		const i =  numInputs === neuronGroups.inputNeurons.length
+		return numInputs === neuronGroups.inputNeurons.length
 			&& numOutputs <= neuronGroups.outputNeurons.length;
-			if(!i) {
-				// console.log(genes)
-				// throw Error('aser')
-			}
-			return i
 	}
 
 	static getNeuronGroups(genes) {
@@ -194,31 +189,27 @@ class NeatNetwork extends BaseNetwork {
 	static useGeneIds(network) {
 		return new BaseNetwork(network).networkAction((n, layer, index) => {
 			n.synapses.forEach(syn => {
-				if(syn.child.index === undefined){
-					// console.log(syn);
-					console.log(syn.child);
-					console.log(syn.parent);
-					console.log(syn.child.index);
-					console.log('G' + (syn.child.layer - syn.parent.layer)
-					+ syn.parent.index + syn.child.index)
-					throw Error('CIRCULAR SYNAPSE')
-				}
+				// Parent distance from bottom
+				const parentDepth = (network.length - 1 - syn.parent.layer)
+				// Parent Index
+				const parentIndex = syn.parent.index;
+				// Child distance from bottom
+				const childDepth = isNaN(network.length - 1 - syn.child.layer)
+					? 'N' : (network.length - 1 - syn.child.layer);
+				// Child Index
+				const childIndex = syn.child.index === undefined ? 'N' : syn.child.index;
 				// Position ID with inverted layering
 				syn.id = 'G'
-					// Parent distance from bottom
-					+ (network.length - 1 - syn.parent.layer)
-					// Parent Index
-					+ syn.parent.index
-					// Child distance from bottom
-					+ (network.length - 1 - syn.child.layer)
-					// Child Index
-					+ syn.child.index
+					+ parentDepth
+					+ parentIndex
+					+ childDepth
+					+ childIndex
 					+ (syn.isInput ? 'I' : '')
 					+ (syn.isOutput ? 'O' : '')
-				syn.parent.id = 'Ne' + syn.id.charAt(1)
-					+ syn.id.charAt(2) + (syn.isInput ? 'I' : '');
-				syn.child.id = 'Ne' + syn.id.charAt(3)
-					+ syn.id.charAt(4) + (syn.isOutput ? 'O' : '');
+				syn.parent.id = 'Ne' + parentDepth
+					+ parentIndex + (syn.isInput ? 'I' : '');
+				syn.child.id = 'Ne' + childDepth
+					+ childDepth + (syn.isOutput ? 'O' : '');
 			});
 		});
 	}

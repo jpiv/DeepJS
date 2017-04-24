@@ -17,7 +17,7 @@ const binarySampleGenerator = function* (size, dimensions) {
 
 const randomSampleGenerator = function* (size, dimensions, range, offset) {
 	while(1) {
-		yield Array.from(Array(dimensions).keys(), () => Math.random() * range + offset);
+		yield Array.from(Array(dimensions).keys(), () => Math.floor(Math.random() * range + offset));
 	}
 };
 
@@ -29,6 +29,15 @@ module.exports = {
 		return Array.from(Array(size).keys(), i => {
 			const inputs = samples.next().value;
 			const ideal = [inputs[0] ^ inputs[1], inputs[1] ^ inputs[2]];
+			return { ideal, inputs };
+		}); 
+	},
+
+	randomXOR(size) {
+		const samples = randomSampleGenerator(size, 2, 2, 0);
+		return Array.from(Array(size).keys(), i => {
+			const inputs = samples.next().value;
+			const ideal = [inputs[0] ^ inputs[1]];
 			return { ideal, inputs };
 		}); 
 	},
