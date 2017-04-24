@@ -19,13 +19,10 @@ const make3LayerGenes = () => {
 	const a2b1 = new Gene({
 		innovation: 3,
 		isInput: true,
-		isOutput: true,
-		parent: a1c1.parent,
+		isOutput: false,
 	});
 	const b1c1 = new Gene({
 		innovation: 4,
-		isInput: true,
-		isOutput: true,
 		parent: a2b1.child,
 		child: a1c1.child
 	});
@@ -94,7 +91,7 @@ describe('Creating Networks', () => {
 		const genes = make3LayerGenes();
 		const net = NeatNetwork.fromGenes(genes);
 		expect(net.network.length).to.equal(3);
-		expect(net.network[1].length).to.equal(1);
+		expect(net.network[1].length).to.equal(3);
 		expect(net.network[2].length).to.equal(1)
 	});
 
@@ -109,8 +106,8 @@ describe('Creating Networks', () => {
 		const genes = make3LayerBiasGenes();
 		const net = NeatNetwork.fromGenes(genes);
 		expect(net.network.length).to.equal(3);
-		expect(net.network[0].length).to.equal(2);
-		expect(net.network[1].length).to.equal(2);
+		expect(net.network[0].length).to.equal(1);
+		expect(net.network[1].length).to.equal(3);
 		expect(net.network[2].length).to.equal(1);
 	});
 });
@@ -126,6 +123,7 @@ describe('Split Gene', () => {
 			const genes = make3LayerGenes();
 			nm.splitGene(genes);
 			const net = NeatNetwork.fromGenes(genes);
+			expect(NeatNetwork.isViable(genes, 3, 1)).to.be.ok;
 		}
 	});
 
@@ -133,7 +131,6 @@ describe('Split Gene', () => {
 		var genes = make3LayerGenes();
 		const originalGeneCount = genes.length;
 		genes = nm.splitGene(genes);
-		const net = NeatNetwork.fromGenes(genes);
 		expect(genes.length).to.equal(originalGeneCount + 1);
 	});
 

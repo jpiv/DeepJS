@@ -57,15 +57,23 @@ class NeatManager {
 			genes,
 			this.networkOptions.inputs,
 			this.networkOptions.outputs
-		))
+		)) {
+			console.log('NON VIABLE')
+			// console.log(genes.map(g => [g.parent.id, g.child.id, g.id]))
 			return null;
-		else {
-			if(this.shouldComplexify)
+		} else {
+			if(this.shouldComplexify) {
 				genes = this.splitGene(genes);
-			if(this.shouldComplexify)
-				genes = this.addNeuron(genes);
-			if(this.shouldComplexify)
+				NeatNetwork.geneLayerMap(genes)
+			}
+			if(this.shouldComplexify) {
+				// genes = this.addNeuron(genes);
+				// NeatNetwork.geneLayerMap(genes)
+			}
+			if(this.shouldComplexify) {
 				genes = this.createNewConnection(genes);
+				NeatNetwork.geneLayerMap(genes)
+			}
 			return NeatNetwork.fromGenes(
 				genes,
 				this.networkOptions,
@@ -77,7 +85,7 @@ class NeatManager {
 	logSpeciesFitness() {
 		this.species.forEach(s => {
 			Logger.log(0, s.name);
-			s.population.sort((s1, s2) => s1.fitness - s2.fitness).forEach(n =>{
+			s.population.sort((s1, s2) => s1.fitness - s2.fitness).forEach(n => {
 				Logger.log(0, '\t', n.id, n.fitness);
 			});
 		});
@@ -133,23 +141,35 @@ class NeatManager {
 			Logger.log(1, 'Prob:', popByProb);
 			Logger.log(3, 'Prob Selection:', probSelectionSet)
 			for(let i = 0; i < speciesOffspringAmounts[speciesIndex]; i++) {
-				const getParent = () => {
+				const getParent = (excludeId) => {
 					const outcome = Math.random();
-					return popByFitness
-							.reduce((acc, net, i) =>
-								acc || (outcome < probSelectionSet[i]
-									&& net),
-								null
-							);
+					var excludeIndex;
+					const fitnessSelection = popByFitness.filter((n, i) => {
+						if(n.id === excludeId) {
+							excludeIndex = i; 
+							return false;
+						}
+						return true;
+					});
+					const probSelection = probSelectionSet.filter((p, i) =>
+						i !== excludeIndex);
+					return fitnessSelection
+						.reduce((acc, net, i) =>
+							acc || (outcome < probSelection[i]
+								&& net),
+							null
+						) || fitnessSelection[fitnessSelection.length - 1];
 				};
 				Logger.log(1, popByFitness.map(n => [n.id, n.fitness]))
 				const parentA = getParent();
 				// TODO: Remove from set instead of Retry
 				// TODO: Only mate with self if species size 1
-				var parentB = getParent();
-				Logger.log(1, 'Parents:', parentA.id, parentB.id);
-				const child = this.reproduce(parentA, parentB, `N${childIndex}`)
+				var parentB = getParent(parentA.id);
+				// console.log(parentA.id, parentB.id)
+				// Logger.log(1, 'Parents:', parentA.id, parentB.id);
+				const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
 					|| this.makeNetwork(null, `N${childIndex}`);
+				childIndex++;
 				nextGeneration.push(child);
 			}
 		});
@@ -193,7 +213,8 @@ class NeatManager {
 				return matchingSets.higher[i];
 			}
 		});
-
+		Logger.log(4, matchingSets.higherKey)
+		Logger.log(4, offspringGenome.map(g => g && g.id))
 		offspringGenome = NeatNetwork.normalizeGenome(offspringGenome);
 		Logger.log(4, geneParents)
 		Logger.log(4, matchingSets.A.map(g => g && g.id))
@@ -204,12 +225,13 @@ class NeatManager {
 	}
 
 	geneMatchingSets(genesA, genesB) {
+		Logger.log(5, this.fullGenome, genesB.map(g=>g.id), genesA.map(g=>g.id))
 		const matchingSetA = this.fullGenome.map((id, i) =>
-			genesA.find(g => g.innovation === i));
+			genesA.find(g => g.id === id));
 		while(!matchingSetA[matchingSetA.length - 1])
 			matchingSetA.pop();
 		const matchingSetB = this.fullGenome.map((id, i) =>
-			genesB.find(g => g.innovation === i));
+			genesB.find(g => g.id === id));
 		while(!matchingSetB[matchingSetB.length - 1])
 			matchingSetB.pop();
 		// Matching set with more or less genes
@@ -217,19 +239,31 @@ class NeatManager {
 		let lowerMatchingSet = matchingSetA;
 		let higherKey = 'B';
 		if(matchingSetA.length >= matchingSetB.length) {
-			const higherMatchingSet = matchingSetA;
-			const lowerMatchingSet = matchingSetB;
-			const higherKey = 'A';
+			higherMatchingSet = matchingSetA;
+			lowerMatchingSet = matchingSetB;
+			higherKey = 'A';
 		}
 		return {
 			higher: higherMatchingSet,
 			lower: lowerMatchingSet,
 			A: matchingSetA,
-			B: matchingSetB
+			B: matchingSetB,
+			higherKey
 		};
 	}
 
+	makeFullGenome() {
+		const genomeHash = {};
+		this.population.forEach(net => {
+			net.networkAction(n =>
+				n.synapses.forEach(syn =>
+					genomeHash[syn.id] = 1));
+		});
+		this.fullGenome = Object.keys(genomeHash);
+	}
+
 	speciate(respeciate=false) {
+		this.makeFullGenome();
 		var lastSpecies = respeciate ? this.species : [];
 		const species = lastSpecies.map(s => {
 			return { name: s.name, population: [] };
@@ -289,6 +323,7 @@ class NeatManager {
 	}
 
 	innovation(geneId) {
+		return 0;
 		return this.fullGenome.indexOf(geneId) > -1
 			? this.fullGenome.indexOf(geneId) : this.fullGenome.push(geneId) - 1;
 	}
@@ -297,12 +332,10 @@ class NeatManager {
 		// Split random gene
 		const gIndex = Math.floor(Math.random() * genes.length);
 		const splitGene = genes[gIndex];
-
 		// Disconnect split gene from it's parent and child
 		splitGene.parent.disconnect(splitGene);
-
 		// Create new node for new genes to connect to
-		const newNode = new GANeuron(splitGene.id + 'S');
+		const newNode = new GANeuron('NeS' + splitGene.id);
 		const innovations = [
 			this.innovation(Gene.idFor(splitGene.parent, newNode)),
 			this.innovation(Gene.idFor(newNode, splitGene.child))
@@ -313,21 +346,16 @@ class NeatManager {
 				innovation: innovations[0],
 				parent: splitGene.parent,
 				child: newNode,
-				weight: this.w,
-				isInput: splitGene.parent.isInput,
-				isOutput: false
+				weight: this.w
 			}),
 			// Gene from new middle node to old child
 			new Gene({
 				innovation: innovations[1],
 				parent: newNode,
 				child: splitGene.child,
-				weight: this.w,
-				isInput: false,
-				isOutput: splitGene.child.isOutput
+				weight: this.w
 			})
 		];
-
 		Logger.log(1, 'Split', newGenes.map(g => g.id));
 		// Create new genome with new genes in place of the split gene
 		return [
@@ -352,6 +380,7 @@ class NeatManager {
 			geneIndex: childIndex 
 		} = this._randomGeneIndex(true, true, childSubMap);
 		const child = childSubMap[childLayerIndex][childIndex];
+		console.log("HERE", child.id, parent.id)
 
 		const connectionExists = parent.id === child.id ||
 			parent.synapses.map(syn => syn.child.id).indexOf(child.id) > -1;
