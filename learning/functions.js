@@ -2,6 +2,8 @@ const Fn = {
 	fitness: {
 		xor: (inputs, outputs) =>
 			1 - Math.abs(Fn.general.xor(inputs[0], inputs[1]) - outputs[0]),
+		and: (inputs, outputs) =>
+			1 - Math.abs(Number(inputs[0] && inputs[1]) - outputs[0])
 	},
 	general: {
 		xor: (i1, i2) => (i1 ^ i2)

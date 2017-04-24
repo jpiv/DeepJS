@@ -18,25 +18,28 @@ updateLogLevel();
 
 const NeatManager = require('./neuroevolution/NeatManager.js');
 const { NeatNetwork, Gene, GANeuron } = require('./neuroevolution/NeatNetwork.js');
-const gens = 300;
+const gens = 1000;
 const nm = new NeatManager({
-	populationSize: 75,
-	compatibilityThreshold: .72,
-	complexificationRate: .01,
+	populationSize: 60,
+	compatibilityThreshold: .67,
+	complexificationRate: .005,
 	excessW: 1,
 	disjointW: 1,
 	meanWeightW: 0.05,
 	network: {
-		mutationRate: .25,
+		mutationRate: .2,
 		inputs: 2,
 		fitnessGenerator: function* () {
-			const fitnessSet = setGen.randomXOR(10);
+			const fitnessSet = setGen.XOR(4);
 			// console.log(fitnessSet)
 			var fitness = 0;
 			for(let i in fitnessSet) {
 				const outputs = yield fitnessSet[i].inputs;
 				const nextFitness = fn.fitness.xor(fitnessSet[i].inputs, outputs);
-				fitness += nextFitness;
+				// fitness += nextFitness;
+				// console.log(nextFitness)
+				fitness = !fitness ? nextFitness
+					: (fitness + nextFitness) / 2;
 				yield fitness;
 			}
 		}
@@ -53,12 +56,13 @@ for(let i = 0; i < gens; i++) {
 	nm.populationFitness();
 }
 nm.logSpeciesFitness();
+const strongestNet = nm.strongestNetwork;
 console.log('spec', nm.species[0] && nm.species[0].name);
 console.log('0, 0');
-console.log(nm.species[0].population[nm.species[0].population.length - 1].sendInput([0, 0]));
+console.log(strongestNet.sendInput([0, 0]));
 console.log('1, 0');
-console.log(nm.species[0].population[nm.species[0].population.length - 1].sendInput([1, 0]));
+console.log(strongestNet.sendInput([1, 0]));
 console.log('0, 1');
-console.log(nm.species[0].population[nm.species[0].population.length - 1].sendInput([0, 1]));
+console.log(strongestNet.sendInput([0, 1]));
 console.log('1, 1');
-console.log(nm.species[0].population[nm.species[0].population.length - 1].sendInput([1, 1]));
+console.log(strongestNet.sendInput([1, 1]));

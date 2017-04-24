@@ -89,10 +89,21 @@ class NeatManager {
 				Logger.log(0, '\t', n.id, n.fitness);
 			});
 		});
-		this.species.length
-			&& this.species[0].population[this.species[0].population.length - 1].logNetwork(0);
-		Logger.log(0, this.species.length
-			&& this.species[0].population[this.species[0].population.length - 1].fitness);
+		const strongestNet = this.strongestNetwork;
+		strongestNet
+			&& strongestNet.logNetwork(0);
+		Logger.log(0, strongestNet
+			&& strongestNet.fitness);
+	}
+
+	get strongestNetwork() {
+		const strongestSpec = this.species.reduce((acc, spec) => {
+			if(!acc)
+				return spec;
+			return acc.population[acc.population.length - 1].fitness >= spec.population[spec.population.length - 1].fitness
+				? acc : spec;
+		}, null);	
+		return strongestSpec.population[strongestSpec.population.length - 1];
 	}
 
 	populationFitness() {
