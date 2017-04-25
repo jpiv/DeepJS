@@ -3,7 +3,9 @@ const Fn = {
 		xor: (inputs, outputs) =>
 			1 - Math.abs(Fn.general.xor(inputs[0], inputs[1]) - outputs[0]),
 		and: (inputs, outputs) =>
-			1 - Math.abs(Number(inputs[0] && inputs[1]) - outputs[0])
+			1 - Math.abs(Number(inputs[0] && inputs[1]) - outputs[0]),
+		xor3: (inputs, outputs) =>
+			1 - Math.abs(inputs[0] ^ inputs[1] ^ inputs[2])
 	},
 	general: {
 		xor: (i1, i2) => (i1 ^ i2)

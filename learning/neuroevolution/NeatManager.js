@@ -58,8 +58,10 @@ class NeatManager {
 			this.networkOptions.inputs,
 			this.networkOptions.outputs
 		)) {
+			// Figure out why this is happening and fix
 			console.log('NON VIABLE')
-			// console.log(genes.map(g => [g.parent.id, g.child.id, g.id]))
+			console.log(genes.map(g => [g.parent.id, g.child.id, g.id]))
+			throw Error('NOT VIABLE')
 			return null;
 		} else {
 			if(this.shouldComplexify) {
