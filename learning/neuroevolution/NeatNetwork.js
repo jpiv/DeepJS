@@ -187,6 +187,8 @@ class NeatNetwork extends BaseNetwork {
 	}
 
 	static useGeneIds(network) {
+		var inputs = [];
+		var outputs = [];
 		return new BaseNetwork(network).networkAction((n, layer, index) => {
 			n.synapses.forEach(syn => {
 				// Parent distance from bottom
@@ -198,18 +200,26 @@ class NeatNetwork extends BaseNetwork {
 					? 'N' : (network.length - 1 - syn.child.layer);
 				// Child Index
 				const childIndex = syn.child.index === undefined ? 'N' : syn.child.index;
+
+				if(syn.isInput && inputs.indexOf(syn.parent) === -1)
+					inputs.push(syn.parent)
+				if(syn.isOutput && outputs.indexOf(syn.child) === -1)
+					outputs.push(syn.child)
+
+				const inputKey = syn.isInput ? 'I' + inputs.length : '';
+				const outputKey = syn.isOutput ? 'O' + outputs.length : '';
 				// Position ID with inverted layering
 				syn.id = 'G'
 					+ parentDepth
 					+ parentIndex
 					+ childDepth
 					+ childIndex
-					+ (syn.isInput ? 'I' : '')
-					+ (syn.isOutput ? 'O' : '')
+					+ inputKey
+					+ outputKey
 				syn.parent.id = 'Ne' + parentDepth
-					+ parentIndex + (syn.isInput ? 'I' : '');
+					+ parentIndex + (inputKey);
 				syn.child.id = 'Ne' + childDepth
-					+ childDepth + (syn.isOutput ? 'O' : '');
+					+ childDepth + (outputKey);
 			});
 		});
 	}

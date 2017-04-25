@@ -70,7 +70,7 @@ class NeatManager {
 			}
 			if(this.shouldComplexify) {
 				genes = this.addNeuron(genes);
-				NeatNetwork.geneLayerMap(genes)
+				NeatNetwork.geneLayerMap(genes);
 			}
 			if(this.shouldComplexify) {
 				genes = this.createNewConnection(genes);
@@ -209,6 +209,7 @@ class NeatManager {
 		Logger.log(4, strongerSet === matchingSets.B, 'Stronger is B')
 		Logger.log(4, 'fitness:', networkA.fitness, networkB.fitness, matchingSets.A === matchingSets.lower, 'A is lower');
 		// Set of genes from both parents
+		const coinFlip = Math.round(Math.random());
 		var offspringGenome = matchingSets.higher.map((gene, i) => {
 			if(!matchingSets.lower[i] || !gene) {
 				if(strongerSet) {
@@ -216,7 +217,6 @@ class NeatManager {
 					return strongerSet[i];
 				} else {
 					geneParents.push('coin flip')
-					const coinFlip = Math.round(Math.random());
 					return coinFlip ? matchingSets.lower[i]
 						: matchingSets.higher[i];
 				}
@@ -417,6 +417,9 @@ class NeatManager {
 		const baseNeuron = glMap[layerIndex][geneIndex];
 		const childNeuron = baseNeuron.synapses[
 			Math.floor(Math.random() * baseNeuron.synapses.length)].child;
+		// Don't connect parent neurons to inputs
+		if(childNeuron.isInput)
+			return genes;
 		const parentNeuron = new GANeuron(childNeuron.id + 'B');
 		const geneId = Gene.idFor(parentNeuron, childNeuron);
 		const innovation = this.innovation(geneId);
