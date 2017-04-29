@@ -45,7 +45,7 @@ class Gene extends BaseSynapse {
 	mutate() {
 		const mutations = [
 			this.mutateWeight,
-			this.mutateEnabled
+			this.mutateEnabled,
 		];
 		const mutationIndex = Math.floor(Math.random() * mutations.length);
 		mutations[mutationIndex].call(this);
@@ -130,7 +130,7 @@ class NeatNetwork extends BaseNetwork {
 		Logger.log(level, this.id)
 		this.networkAction((n, layer, index) => Logger.log(level, '\t', n.isInput, n.isOutput, '\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
 		Logger.log(level, '\tGenes:')
-		this.genes.forEach(g => Logger.log(level, '\t', g.id, g.w))
+		this.genes.forEach(g => Logger.log(level, '\t', g.enabled, g.id, g.w))
 	}
 
 	static fromGenes(genes, options={}, id) {

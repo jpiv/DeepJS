@@ -58,7 +58,6 @@ class NeatManager {
 			this.networkOptions.inputs,
 			this.networkOptions.outputs
 		)) {
-			// Figure out why this is happening and fix
 			console.log(genes.map(g => [g.parent.id, g.child.id, g.id]))
 			throw Error('NOT VIABLE')
 			return null;
@@ -68,8 +67,8 @@ class NeatManager {
 				NeatNetwork.geneLayerMap(genes)
 			}
 			if(this.shouldComplexify) {
-				// genes = this.addNeuron(genes);
-				// NeatNetwork.geneLayerMap(genes);
+				genes = this.addNeuron(genes);
+				NeatNetwork.geneLayerMap(genes);
 			}
 			if(this.shouldComplexify) {
 				genes = this.createNewConnection(genes);
@@ -176,7 +175,6 @@ class NeatManager {
 				};
 				Logger.log(1, popByFitness.map(n => [n.id, n.fitness]))
 				const parentA = getParent();
-				// TODO: Remove from set instead of Retry
 				// TODO: Only mate with self if species size 1
 				var parentB = getParent(parentA.id);
 				// console.log(parentA.id, parentB.id)
@@ -236,8 +234,7 @@ class NeatManager {
 		Logger.log(4, offspringGenome.map(g => g && g.id))
 		if(!offspringGenome.length)
 			console.log('NO GENES')
-		const offspring = offspringGenome.length && this.makeNetwork(offspringGenome, id);
-		return offspring;
+		return offspringGenome.length && this.makeNetwork(offspringGenome, id);
 	}
 
 	geneMatchingSets(genesA, genesB) {

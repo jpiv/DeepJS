@@ -127,11 +127,11 @@ describe('Split Gene', () => {
 		}
 	});
 
-	it('Split genes should increase total gene count by one', () => {
+	it('Split genes should increase total gene count by two', () => {
 		var genes = make3LayerGenes();
 		const originalGeneCount = genes.length;
 		genes = nm.splitGene(genes);
-		expect(genes.length).to.equal(originalGeneCount + 1);
+		expect(genes.length).to.equal(originalGeneCount + 2);
 	});
 
 	it('Split gene should add 1 layer to default network', () => {
