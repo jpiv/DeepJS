@@ -59,7 +59,6 @@ class NeatManager {
 			this.networkOptions.outputs
 		)) {
 			// Figure out why this is happening and fix
-			console.log('NON VIABLE')
 			console.log(genes.map(g => [g.parent.id, g.child.id, g.id]))
 			throw Error('NOT VIABLE')
 			return null;
@@ -69,8 +68,8 @@ class NeatManager {
 				NeatNetwork.geneLayerMap(genes)
 			}
 			if(this.shouldComplexify) {
-				genes = this.addNeuron(genes);
-				NeatNetwork.geneLayerMap(genes);
+				// genes = this.addNeuron(genes);
+				// NeatNetwork.geneLayerMap(genes);
 			}
 			if(this.shouldComplexify) {
 				genes = this.createNewConnection(genes);
@@ -350,7 +349,7 @@ class NeatManager {
 		const gIndex = Math.floor(Math.random() * genes.length);
 		const splitGene = genes[gIndex];
 		// Disconnect split gene from it's parent and child
-		splitGene.parent.disconnect(splitGene);
+		// splitGene.parent.disconnect(splitGene);
 		// Create new node for new genes to connect to
 		const newNode = new GANeuron('NeS' + splitGene.id);
 		const innovations = [
@@ -376,9 +375,8 @@ class NeatManager {
 		Logger.log(1, 'Split', newGenes.map(g => g.id));
 		// Create new genome with new genes in place of the split gene
 		return [
-			...genes.slice(0, gIndex),
-			...newGenes,
-			...genes.slice(gIndex + 1)
+			...genes,
+			...newGenes
 		];
 	}
 
