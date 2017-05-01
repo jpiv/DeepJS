@@ -67,15 +67,21 @@ class Gene extends BaseSynapse {
 }
 
 class GANeuron extends BaseNeuron {
-	constructor(id, isInput, isOutput) {
+	constructor(id, isInput, isOutput, isBias) {
 		super(null, sigmoid, sigmoidPrime, null, null, id);
 		this.isInput = isInput || false;
 		this.isOutput = isOutput || false;
+		this.isBias = isBias || false;
 	}
 
 	connect(syn, neuron) {
 		this.synapses.push(syn);
 		neuron._connectParent(syn);
+	}
+
+	inputImpulse(value) {
+		if(!this.isBias)
+			super.inputImpulse(value);
 	}
 
 	reconnect(syn, newChild) {
@@ -104,7 +110,7 @@ class GANeuron extends BaseNeuron {
 	}
 
 	clone() {
-		return new GANeuron(this.id, this.isInput, this.isOutput);
+		return new GANeuron(this.id, this.isInput, this.isOutput, this.isBias);
 	}
 }
 
@@ -208,6 +214,7 @@ class NeatNetwork extends BaseNetwork {
 
 				const inputKey = syn.isInput ? 'I' + inputs.length : '';
 				const outputKey = syn.isOutput ? 'O' + outputs.length : '';
+				const biasKey = syn.parent.isBias ? 'B' : '';
 				// Position ID with inverted layering
 				syn.id = 'G'
 					+ parentDepth
@@ -217,9 +224,17 @@ class NeatNetwork extends BaseNetwork {
 					+ inputKey
 					+ outputKey
 				syn.parent.id = 'Ne' + parentDepth
-					+ parentIndex + (inputKey);
+					 + (inputKey) + (biasKey);
 				syn.child.id = 'Ne' + childDepth
-					+ childDepth + (outputKey);
+					+ childIndex + (outputKey);
+				if(syn.parent.isBias) {
+					syn.id = 'G'
+						+ parentDepth
+						+ childDepth
+						+ childIndex
+						+ biasKey
+					syn.parent.id = 'Ne' + parentDepth + (biasKey);
+				}
 			});
 		});
 	}

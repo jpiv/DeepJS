@@ -69,10 +69,16 @@ class NeatManager {
 			if(this.shouldComplexify) {
 				genes = this.addNeuron(genes);
 				NeatNetwork.geneLayerMap(genes);
+				NeatNetwork.normalizeGenome(genes);
 			}
 			if(this.shouldComplexify) {
 				genes = this.createNewConnection(genes);
 				NeatNetwork.geneLayerMap(genes)
+			}
+			if(this.shouldComplexify) {
+				genes = this.addBias(genes);
+				NeatNetwork.geneLayerMap(genes);
+				NeatNetwork.normalizeGenome(genes);
 			}
 			return NeatNetwork.fromGenes(
 				genes,
@@ -85,8 +91,9 @@ class NeatManager {
 	logSpeciesFitness() {
 		this.species.forEach(s => {
 			Logger.log(0, s.name);
-			s.population.sort((s1, s2) => s1.fitness - s2.fitness).forEach(n => {
+			s.population.sort((s1, s2) => s1.fitness - s2.fitness).forEach((n,i,l) => {
 				Logger.log(0, '\t', n.id, n.fitness);
+				i === l.length - 1 && n.logNetwork(0);
 			});
 		});
 		const strongestNet = this.strongestNetwork;
@@ -134,7 +141,7 @@ class NeatManager {
 				.sort((n1, n2) => n1.fitness - n2.fitness);
 
 			const totalSpecFitness = popByFitness.reduce((acc, n, i) =>
-				acc + n.fitness * Math.pow(2, i), 0);
+				acc + (n.fitness * Math.pow(2, i)), 0);
 			// Array of species pobabilities to reproduce
 			const popByProb = popByFitness.map((n, i) =>
 				(n.fitness * Math.pow(2, i)) / totalSpecFitness);
@@ -150,15 +157,17 @@ class NeatManager {
 				});
 			};
 			const probSelectionSet = createSelectionSet();
-			Logger.log(1, 'Fitness:', popByFitness.map(i => i.fitness))
-			Logger.log(1, 'Prob:', popByProb);
+			Logger.log(3, 'Fitness:', popByFitness.map(i => i.fitness))
+			Logger.log(3, 'Prob:', popByProb);
 			Logger.log(3, 'Prob Selection:', probSelectionSet)
+			if(speciesOffspringAmounts[speciesIndex] < 1)
+				console.log('dead species', speciesOffspringAmounts[speciesIndex]);	
 			for(let i = 0; i < speciesOffspringAmounts[speciesIndex]; i++) {
-				const getParent = (excludeId) => {
+				const getParent = (excludeN) => {
 					const outcome = Math.random();
 					var excludeIndex;
 					const fitnessSelection = popByFitness.filter((n, i) => {
-						if(n.id === excludeId) {
+						if(n === excludeN) {
 							excludeIndex = i; 
 							return false;
 						}
@@ -173,12 +182,16 @@ class NeatManager {
 							null
 						) || fitnessSelection[fitnessSelection.length - 1];
 				};
-				Logger.log(1, popByFitness.map(n => [n.id, n.fitness]))
 				const parentA = getParent();
+				// Logger.log(3, popByFitness.indexOf(parentA))
 				// TODO: Only mate with self if species size 1
-				var parentB = getParent(parentA.id);
+				var parentB = getParent(spec.population.length > 1 && parentA);
 				// console.log(parentA.id, parentB.id)
 				// Logger.log(1, 'Parents:', parentA.id, parentB.id);
+				if(!parentB){
+					console.log(probSelectionSet, spec.population.length)
+					console.log('hereeee', speciesOffspringAmounts[speciesIndex])
+				}
 				const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
 					|| this.makeNetwork(null, `N${childIndex}`);
 				childIndex++;
@@ -277,7 +290,7 @@ class NeatManager {
 
 	speciate(respeciate=false) {
 		this.makeFullGenome();
-		var lastSpecies = respeciate ? this.species : [];
+		var lastSpecies = [];
 		const species = lastSpecies.map(s => {
 			return { name: s.name, population: [] };
 		});
@@ -295,19 +308,22 @@ class NeatManager {
 				let excessGenes = 0;
 				let disjointGenes = 0;
 				let meanWeightDelta = 0;
+				let matchingGenes = 0;
 				Logger.log(1, matchingSets.higher.map(g => g && g.id))
 				Logger.log(1, matchingSets.lower.map(g => g && g.id))
 				matchingSets.higher.forEach((id, i) => {
 					if(i < matchingSets.lower.length) {
 						if(!!matchingSets.lower[i] ^ !!matchingSets.higher[i])
 							disjointGenes++;
-						else if(matchingSets.higher[i])
-							meanWeightDelta = (meanWeightDelta +
-								Math.abs(matchingSets.higher[i].w - matchingSets.lower[i].w)) / 2;
+						else if(matchingSets.higher[i]) {
+							meanWeightDelta +=
+								Math.abs(matchingSets.higher[i].w - matchingSets.lower[i].w);
+							matchingGenes++;								
+						}
 					} else if(matchingSets.higher[i])
 						excessGenes++;
 				});
-
+				meanWeightDelta /= matchingGenes;
 				Logger.log(2, excessGenes, disjointGenes, meanWeightDelta, 'ex di');
 				// Number of genes in the larger genome
 				const N = matchingSets.higher.length;
@@ -348,6 +364,8 @@ class NeatManager {
 		// Disconnect split gene from it's parent and child
 		// splitGene.parent.disconnect(splitGene);
 		// Create new node for new genes to connect to
+		if(splitGene.parent.isBias)
+			return genes;
 		const newNode = new GANeuron('NeS' + splitGene.id);
 		const innovations = [
 			this.innovation(Gene.idFor(splitGene.parent, newNode)),
@@ -396,7 +414,7 @@ class NeatManager {
 		const connectionExists = parent.id === child.id ||
 			parent.synapses.map(syn => syn.child.id).indexOf(child.id) > -1;
 		Logger.log(1, 'New Connection', parent.id, child.id, connectionExists);
-		if(!connectionExists) {
+		if(!connectionExists && !child.isBias) {
 			const geneId = Gene.idFor(parent, child);
 			const innovation = this.innovation(geneId);
 			return [...genes, new Gene({ innovation, parent, child })];
@@ -408,14 +426,37 @@ class NeatManager {
 
 	addNeuron(genes) {
 		const glMap = NeatNetwork.geneLayerMap(genes);
+		const { layerIndex, geneIndex } = this._randomGeneIndex(false, false, glMap);
+		const baseNeuron = glMap[layerIndex][geneIndex];
+		// Don't connect parent neurons to inputs
+		if(baseNeuron.isInput || baseNeuron.isBias || !baseNeuron.parentSynapses.length || !baseNeuron.synapses.length)
+			return genes;
+		const newNeuron = new GANeuron(baseNeuron.id + 'B', false, false);
+		const geneId = Gene.idFor(newNeuron, baseNeuron);
+		const innovation = this.innovation(geneId);
+		const newGene = new Gene({
+			innovation: innovation,
+			parent: newNeuron,
+			child: baseNeuron.synapses[0].child
+		});
+		const newGene2 = new Gene({
+			innovation,
+			parent: baseNeuron.parentSynapses[0].parent,
+			child: newNeuron
+		});
+		return [...genes, newGene, newGene2];
+	}
+
+	addBias(genes) {
+		const glMap = NeatNetwork.geneLayerMap(genes);
 		const { layerIndex, geneIndex } = this._randomGeneIndex(true, false, glMap);
 		const baseNeuron = glMap[layerIndex][geneIndex];
 		const childNeuron = baseNeuron.synapses[
 			Math.floor(Math.random() * baseNeuron.synapses.length)].child;
 		// Don't connect parent neurons to inputs
-		if(childNeuron.isInput)
+		if(childNeuron.isInput || childNeuron.isBias)
 			return genes;
-		const parentNeuron = new GANeuron(childNeuron.id + 'B');
+		const parentNeuron = new GANeuron(childNeuron.id + 'B', false, false, true);
 		const geneId = Gene.idFor(parentNeuron, childNeuron);
 		const innovation = this.innovation(geneId);
 		const newGene = new Gene({
