@@ -1,5 +1,5 @@
 const path = require('path');
-const HtmlWebpackPlugin = require('webpack-html-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
 	entry: ['es6-shim', 'babel-polyfill', 'isomorphic-fetch', './app/index.jsx'],
