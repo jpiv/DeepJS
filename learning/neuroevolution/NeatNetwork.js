@@ -171,6 +171,21 @@ class NeatNetwork extends BaseNetwork {
 		 return net;
 	}
 
+	static getInputDegrees(genes) {
+		const filteredGenes = genes.filter(g => !!g)
+		const glMap = NeatNetwork.geneLayerMap(filteredGenes);
+		const nGroups = NeatNetwork.getNeuronGroups(filteredGenes);
+		const baseNet = new BaseNetwork(glMap);
+		const inputDegrees = [];
+		nGroups.inputNeurons.forEach(inputN => {
+			baseNet.networkAction((n, l, i) => {
+				if(n === inputN)
+					inputDegrees.push(glMap.length - 1 - l);
+			});
+		});
+		return inputDegrees;
+	}
+
 	static isViable(genes, numInputs, numOutputs) {
 		const neuronGroups = NeatNetwork.getNeuronGroups(genes);
 		return numInputs === neuronGroups.inputNeurons.length

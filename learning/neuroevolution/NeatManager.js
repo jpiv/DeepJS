@@ -19,6 +19,8 @@ class NeatManager {
 		this.disjointW = options.disjointW || 1;
 		// Average gene weight difference weight
 		this.meanWeightW = options.meanWeightW || 1;
+		// Average input degress difference
+		this.degreeDeltaW = options.degreeDeltaW || 1;
 		this.species = this.speciate();
 		Logger.log(1, 'Species:');
 		this.species.map(s => Logger.log(1, '\t', s.name, s.population.length));
@@ -66,11 +68,11 @@ class NeatManager {
 				genes = this.splitGene(genes);
 				NeatNetwork.geneLayerMap(genes)
 			}
-			if(this.shouldComplexify) {
-				genes = this.addNeuron(genes);
-				NeatNetwork.geneLayerMap(genes);
-				NeatNetwork.normalizeGenome(genes);
-			}
+			// if(this.shouldComplexify) {
+			// 	genes = this.addNeuron(genes);
+			// 	NeatNetwork.geneLayerMap(genes);
+			// 	NeatNetwork.normalizeGenome(genes);
+			// }
 			if(this.shouldComplexify) {
 				genes = this.createNewConnection(genes);
 				NeatNetwork.geneLayerMap(genes)
@@ -129,7 +131,7 @@ class NeatManager {
 		const totalFitness = speciesFitnesses.reduce((acc, fit) => acc + fit, 0);
 		// Proportional amount of reproductions allowed per species
 		const speciesOffspringAmounts = speciesFitnesses.map(fitness =>
-			Math.floor((fitness / totalFitness) * this.populationSize));
+			Math.ceil((fitness / totalFitness) * this.populationSize));
 		Logger.log(1, 'Species Fitnesses:', speciesFitnesses, 'total:', totalFitness);
 		Logger.log(1, 'Offspring', speciesOffspringAmounts);
 		// Calculate adjusted fitness for each specicies
@@ -323,15 +325,24 @@ class NeatManager {
 					} else if(matchingSets.higher[i])
 						excessGenes++;
 				});
-				meanWeightDelta /= matchingGenes;
+				meanWeightDelta = matchingGenes ? meanWeightDelta / matchingGenes : 0;
 				Logger.log(2, excessGenes, disjointGenes, meanWeightDelta, 'ex di');
 				// Number of genes in the larger genome
 				const N = matchingSets.higher.length;
+				const lowerInputDeg = NeatNetwork.getInputDegrees(matchingSets.lower);
+				const higherInputDeg = NeatNetwork.getInputDegrees(matchingSets.higher);
+				// const inputDegreeDeltas = higherInputDeg.reduce((acc, deg, i) => {
+				// 	return acc + (Math.abs(deg - lowerInputDeg[i]) * this.degreeDeltaW);
+				// }, 0);
+				const minDegreeDelta = Math.abs(Math.min(...lowerInputDeg) - Math.min(...higherInputDeg));
 				// Calulate species distance
 				const speciesDistance =
 					(this.excessW * excessGenes) / N +
 					(this.disjointW * disjointGenes) / N +
+					(this.degreeDeltaW * minDegreeDelta) +
 					(this.meanWeightW * meanWeightDelta);
+				// if(minDegreeDelta > 0)
+					// console.log(lowerInputDeg, higherInputDeg, speciesDistance)
 				Logger.log(1, 'SN:', speciesDistance);
 				assignedSpecies = speciesDistance <= this.compatibilityThreshold
 					? speciesIndex : null;
