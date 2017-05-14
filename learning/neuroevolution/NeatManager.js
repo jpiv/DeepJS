@@ -36,8 +36,12 @@ class NeatManager {
 
 	_initialPopulation() {
 		const population = [];
+		const base = this.makeNetwork(null, `NT-1`)
 		for(let i = 0; i < this.populationSize; i++) {
-			population.push(this.makeNetwork(null, `NT${i}`));
+			const newGenes = base.replicateGenes();
+			NeatNetwork.normalizeGenome(newGenes)	
+			const genes = NeatNetwork.geneLayerMap(newGenes);
+			population.push(this.makeNetwork(newGenes, `NT${i}`));
 			if(!i)
 				this.fullGenome = population[i].genes.map(g => g.id);
 		}
@@ -68,11 +72,11 @@ class NeatManager {
 				genes = this.splitGene(genes);
 				NeatNetwork.geneLayerMap(genes)
 			}
-			// if(this.shouldComplexify) {
-			// 	genes = this.addNeuron(genes);
-			// 	NeatNetwork.geneLayerMap(genes);
-			// 	NeatNetwork.normalizeGenome(genes);
-			// }
+			if(this.shouldComplexify) {
+				genes = this.addNeuron(genes);
+				NeatNetwork.geneLayerMap(genes);
+				NeatNetwork.normalizeGenome(genes);
+			}
 			if(this.shouldComplexify) {
 				genes = this.createNewConnection(genes);
 				NeatNetwork.geneLayerMap(genes)
@@ -122,86 +126,151 @@ class NeatManager {
 	}
 
 	advanceGeneration() {
+		// if(this.species.length > 50) {
+		// 	this.compatibilityThreshold = 1.3
+		// 	console.log("up ")
+		// }
 		const nextGeneration = [];
-		const speciesFitnesses = this.species.map(spec =>
-			spec.population.reduce((acc, network) =>
-				acc + 
-					(network.fitness / spec.population.length)
-			, 0));
-		const totalFitness = speciesFitnesses.reduce((acc, fit) => acc + fit, 0);
+		// const speciesFitnesses = this.species.map(spec =>
+		// 	spec.population.reduce((acc, network) =>
+		// 		acc + 
+		// 			(network.fitness / spec.population.length)
+		// 	, 0));
+		// const totalFitness = speciesFitnesses.reduce((acc, fit) => acc + fit, 0);
 		// Proportional amount of reproductions allowed per species
-		const speciesOffspringAmounts = speciesFitnesses.map(fitness =>
-			Math.ceil((fitness / totalFitness) * this.populationSize));
-		Logger.log(1, 'Species Fitnesses:', speciesFitnesses, 'total:', totalFitness);
-		Logger.log(1, 'Offspring', speciesOffspringAmounts);
-		// Calculate adjusted fitness for each specicies
-		// Calculate proportion of total adjusted fitness
-		this.species.forEach((spec, speciesIndex) => {
-			var childIndex = 0;
-			// Array of species population fitness sorted by fitness
-			const popByFitness = spec.population
-				.sort((n1, n2) => n1.fitness - n2.fitness);
-
-			const totalSpecFitness = popByFitness.reduce((acc, n, i) =>
-				acc + (n.fitness * Math.pow(2, i)), 0);
-			// Array of species pobabilities to reproduce
-			const popByProb = popByFitness.map((n, i) =>
-				(n.fitness * Math.pow(2, i)) / totalSpecFitness);
-			const createSelectionSet = () => {
-				var lastProb = popByProb[0];
-				return popByProb.map((prob, speciesIndex) => {
-					if(popByProb.length === 1)
-						return 1;
-					if(speciesIndex === 0)
-						return prob;
-					lastProb = lastProb + prob;
-					return lastProb;
+		// const speciesOffspringAmounts = speciesFitnesses.map(fitness =>
+		// 	Math.ceil((fitness / totalFitness) * this.populationSize));
+		// Logger.log(7, 'Species Fitnesses:', speciesFitnesses, 'total:', totalFitness);
+		// Logger.log(7, 'Offspring', speciesOffspringAmounts);
+		var adjustedFitnesses = [];	
+		this.species.forEach((spec, i) => {
+			const speciesAdjustedFitnesses = spec.population.map(net =>
+				({ fitness: net.fitness / spec.population.length, net }));
+			adjustedFitnesses = [...adjustedFitnesses, ...speciesAdjustedFitnesses];
+		});
+		adjustedFitnesses
+			.sort((fit1, fit2) => fit1.fitness - fit2.fitness)
+			.forEach((fit, i, list) => fit.fitness = fit.fitness * (i < Math.floor(this.populationSize * .6) ? 0 : 1));
+		const totalFitness = adjustedFitnesses.reduce((acc, fit) => acc + fit.fitness, 0);
+		const popByProb = adjustedFitnesses.map(fit => fit.fitness / totalFitness);
+		const createSelectionSet = () => {
+			var lastProb = popByProb[0];
+			return popByProb.map((prob, speciesIndex) => {
+				if(popByProb.length === 1)
+					return 1;
+				if(speciesIndex === 0)
+					return prob;
+				lastProb = lastProb + prob;
+				return lastProb;
+			});
+		};
+		const probSelectionSet = createSelectionSet();
+		Logger.log(3, 'adjustedFitnesses', adjustedFitnesses.map(fit => `${fit.fitness} ${fit.net.species}`))
+		Logger.log(3, 'popByProb', popByProb)
+		Logger.log(3, 'probSelectionSet', probSelectionSet)
+		this.population.forEach((individual, childIndex) => {
+		 	const getParent = (excludeN) => {
+				const outcome = Math.random();
+				var excludeIndex;
+				const fitnessSelection = adjustedFitnesses.filter((fit, i) => {
+					if(fit.net === excludeN) {
+						excludeIndex = i; 
+						return false;
+					}
+					return true;
 				});
+				const probSelection = probSelectionSet.filter((p, i) =>
+					i !== excludeIndex);
+				return fitnessSelection
+					.reduce((acc, net, i) =>
+						acc || (outcome < probSelection[i]
+							&& net),
+						null
+					) || fitnessSelection[fitnessSelection.length - 1];
 			};
-			const probSelectionSet = createSelectionSet();
-			Logger.log(3, 'Fitness:', popByFitness.map(i => i.fitness))
-			Logger.log(3, 'Prob:', popByProb);
-			Logger.log(3, 'Prob Selection:', probSelectionSet)
-			if(speciesOffspringAmounts[speciesIndex] < 1)
-				console.log('dead species', speciesOffspringAmounts[speciesIndex]);	
-			for(let i = 0; i < speciesOffspringAmounts[speciesIndex]; i++) {
-				const getParent = (excludeN) => {
-					const outcome = Math.random();
-					var excludeIndex;
-					const fitnessSelection = popByFitness.filter((n, i) => {
-						if(n === excludeN) {
-							excludeIndex = i; 
-							return false;
-						}
-						return true;
-					});
-					const probSelection = probSelectionSet.filter((p, i) =>
-						i !== excludeIndex);
-					return fitnessSelection
-						.reduce((acc, net, i) =>
-							acc || (outcome < probSelection[i]
-								&& net),
-							null
-						) || fitnessSelection[fitnessSelection.length - 1];
-				};
-				const parentA = getParent();
-				// Logger.log(3, popByFitness.indexOf(parentA))
-				// TODO: Only mate with self if species size 1
-				var parentB = getParent(spec.population.length > 1 && parentA);
-				// console.log(parentA.id, parentB.id)
-				// Logger.log(1, 'Parents:', parentA.id, parentB.id);
-				if(!parentB){
-					console.log(probSelectionSet, spec.population.length)
-					console.log('hereeee', speciesOffspringAmounts[speciesIndex])
-				}
-				const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
-					|| this.makeNetwork(null, `N${childIndex}`);
-				childIndex++;
-				nextGeneration.push(child);
+			const parentA = getParent().net;
+			// Logger.log(3, popByFitness.indexOf(parentA))
+			// TODO: Only mate with self if species size 1
+			var parentB = getParent(parentA).net;
+			// console.log(parentA.id, parentB.id)
+			// Logger.log(1, 'Parents:', parentA.id, parentB.id);
+			if(!parentB){
+				console.log('No Parent B')
 			}
+			const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
+				|| this.makeNetwork(null, `N${childIndex}`);
+			childIndex++;
+			nextGeneration.push(child);
 		});
 		this.population = nextGeneration;
 		this.species = this.speciate(true);
+		// Calculate adjusted fitness for each specicies
+		// Calculate proportion of total adjusted fitness
+		// this.species.forEach((spec, speciesIndex) => {
+
+			// var childIndex = 0;
+			// // Array of species population fitness sorted by fitness
+			// const popByFitness = spec.population
+			// 	.sort((n1, n2) => n1.fitness - n2.fitness);
+
+			// const totalSpecFitness = popByFitness.reduce((acc, n, i) =>
+			// 	acc + i, 1);
+			// // Array of species pobabilities to reproduce
+			// const popByProb = popByFitness.map((n, i) =>
+			// 	i < 100 ? 1 / 1000 : 0);
+			// const createSelectionSet = () => {
+			// 	var lastProb = popByProb[0];
+			// 	return popByProb.map((prob, speciesIndex) => {
+			// 		if(popByProb.length === 1)
+			// 			return 1;
+			// 		if(speciesIndex === 0)
+			// 			return prob;
+			// 		lastProb = lastProb + prob;
+			// 		return lastProb;
+			// 	});
+			// };
+			// const probSelectionSet = createSelectionSet();
+			// Logger.log(3, 'Fitness:', popByFitness.map(i => i.fitness))
+			// Logger.log(3, 'Prob:', popByProb);
+			// Logger.log(3, 'Prob Selection:', probSelectionSet)
+			// if(speciesOffspringAmounts[speciesIndex] < 1)
+			// 	console.log('dead species', speciesOffspringAmounts[speciesIndex]);	
+			// for(let i = 0; i < speciesOffspringAmounts[speciesIndex]; i++) {
+			// 	const getParent = (excludeN) => {
+			// 		const outcome = Math.random();
+			// 		var excludeIndex;
+			// 		const fitnessSelection = popByFitness.filter((n, i) => {
+			// 			if(n === excludeN) {
+			// 				excludeIndex = i; 
+			// 				return false;
+			// 			}
+			// 			return true;
+			// 		});
+			// 		const probSelection = probSelectionSet.filter((p, i) =>
+			// 			i !== excludeIndex);
+			// 		return fitnessSelection
+			// 			.reduce((acc, net, i) =>
+			// 				acc || (outcome < probSelection[i]
+			// 					&& net),
+			// 				null
+			// 			) || fitnessSelection[fitnessSelection.length - 1];
+			// 	};
+			// 	const parentA = getParent();
+			// 	// Logger.log(3, popByFitness.indexOf(parentA))
+			// 	// TODO: Only mate with self if species size 1
+			// 	var parentB = getParent(spec.population.length > 1 && parentA);
+			// 	// console.log(parentA.id, parentB.id)
+			// 	// Logger.log(1, 'Parents:', parentA.id, parentB.id);
+			// 	if(!parentB){
+			// 		console.log(probSelectionSet, spec.population.length)
+			// 		console.log('hereeee', speciesOffspringAmounts[speciesIndex])
+			// 	}
+			// 	const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
+			// 		|| this.makeNetwork(null, `N${childIndex}`);
+			// 	childIndex++;
+			// 	nextGeneration.push(child);
+			// }
+		// });
 	}
 
 	reproduce(networkA, networkB, id) {
@@ -240,13 +309,16 @@ class NeatManager {
 				return matchingSets.higher[i];
 			}
 		});
-		Logger.log(4, matchingSets.higherKey)
 		Logger.log(4, offspringGenome.map(g => g && g.id))
-		offspringGenome = NeatNetwork.normalizeGenome(offspringGenome);
 		Logger.log(4, geneParents)
 		Logger.log(4, matchingSets.A.map(g => g && g.id))
 		Logger.log(4, matchingSets.B.map(g => g && g.id))
-		Logger.log(4, offspringGenome.map(g => g && g.id))
+		Logger.log(4, offspringGenome.map(g => g && g.id) + 'fdas')
+		offspringGenome = NeatNetwork.normalizeGenome(offspringGenome);
+		Logger.log(4, offspringGenome.map(g => g && g.id) + 'fdas')
+		// Probs don't need this!
+		NeatNetwork.geneLayerMap(offspringGenome)
+		Logger.log(4, offspringGenome.map(g => g && g.id) + '32')
 		if(!offspringGenome.length)
 			console.log('NO GENES')
 		return offspringGenome.length && this.makeNetwork(offspringGenome, id);
@@ -296,11 +368,12 @@ class NeatManager {
 		const species = lastSpecies.map(s => {
 			return { name: s.name, population: [] };
 		});
-		this.population.forEach(individual => {
-			let assignedSpecies;
+		this.population.forEach((individual, i) => {
+			let assignedSpecies = null;
 			species.forEach((spec, speciesIndex) => {
-				const lastPopulation = spec.population.length
-					? spec.population : lastSpecies[speciesIndex].population;
+				// const lastPopulation = spec.population.length
+				// 	? spec.population : lastSpecies[speciesIndex].population;
+				const lastPopulation = spec.population;
 				// Choose random individual from species
 				const refIndividual = 
 					lastPopulation[Math.floor(Math.random() * lastPopulation.length)];
@@ -329,23 +402,24 @@ class NeatManager {
 				Logger.log(2, excessGenes, disjointGenes, meanWeightDelta, 'ex di');
 				// Number of genes in the larger genome
 				const N = matchingSets.higher.length;
-				const lowerInputDeg = NeatNetwork.getInputDegrees(matchingSets.lower);
-				const higherInputDeg = NeatNetwork.getInputDegrees(matchingSets.higher);
+				// const lowerInputDeg = NeatNetwork.getInputDegrees(matchingSets.lower);
+				// const higherInputDeg = NeatNetwork.getInputDegrees(matchingSets.higher);
 				// const inputDegreeDeltas = higherInputDeg.reduce((acc, deg, i) => {
 				// 	return acc + (Math.abs(deg - lowerInputDeg[i]) * this.degreeDeltaW);
 				// }, 0);
-				const minDegreeDelta = Math.abs(Math.min(...lowerInputDeg) - Math.min(...higherInputDeg));
+				// const minDegreeDelta = Math.abs(Math.min(...lowerInputDeg) - Math.min(...higherInputDeg));
 				// Calulate species distance
 				const speciesDistance =
 					(this.excessW * excessGenes) / N +
 					(this.disjointW * disjointGenes) / N +
-					(this.degreeDeltaW * minDegreeDelta) +
+					// (this.degreeDeltaW * minDegreeDelta) +
 					(this.meanWeightW * meanWeightDelta);
 				// if(minDegreeDelta > 0)
 					// console.log(lowerInputDeg, higherInputDeg, speciesDistance)
 				Logger.log(1, 'SN:', speciesDistance);
-				assignedSpecies = speciesDistance <= this.compatibilityThreshold
-					? speciesIndex : null;
+				if(assignedSpecies === null)
+					assignedSpecies = (speciesDistance <= this.compatibilityThreshold
+						? speciesIndex : null);
 			});
 
 			if(typeof assignedSpecies === 'number'){
@@ -373,10 +447,10 @@ class NeatManager {
 		const gIndex = Math.floor(Math.random() * genes.length);
 		const splitGene = genes[gIndex];
 		// Disconnect split gene from it's parent and child
-		// splitGene.parent.disconnect(splitGene);
 		// Create new node for new genes to connect to
 		if(splitGene.parent.isBias)
 			return genes;
+		splitGene.parent.disconnect(splitGene);
 		const newNode = new GANeuron('NeS' + splitGene.id);
 		const innovations = [
 			this.innovation(Gene.idFor(splitGene.parent, newNode)),
@@ -388,21 +462,22 @@ class NeatManager {
 				innovation: innovations[0],
 				parent: splitGene.parent,
 				child: newNode,
-				weight: this.w
+				weight: splitGene.w
 			}),
 			// Gene from new middle node to old child
 			new Gene({
 				innovation: innovations[1],
 				parent: newNode,
 				child: splitGene.child,
-				weight: this.w
+				weight: splitGene.w
 			})
 		];
 		Logger.log(1, 'Split', newGenes.map(g => g.id));
 		// Create new genome with new genes in place of the split gene
 		return [
-			...genes,
-			...newGenes
+			...genes.slice(0, gIndex),
+			...newGenes,
+			...genes.slice(gIndex + 1)
 		];
 	}
 
@@ -425,7 +500,7 @@ class NeatManager {
 		const connectionExists = parent.id === child.id ||
 			parent.synapses.map(syn => syn.child.id).indexOf(child.id) > -1;
 		Logger.log(1, 'New Connection', parent.id, child.id, connectionExists);
-		if(!connectionExists && !child.isBias) {
+		if(!connectionExists && !child.isBias && !child.isInput) {
 			const geneId = Gene.idFor(parent, child);
 			const innovation = this.innovation(geneId);
 			return [...genes, new Gene({ innovation, parent, child })];

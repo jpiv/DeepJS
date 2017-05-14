@@ -14,7 +14,7 @@ class Gene extends BaseSynapse {
 		this.innovation = options.innovation;
 		this.isInput = this.parent.isInput;
 		this.isOutput = this.child.isOutput;
-		this.enabled = true;
+		this.enabled = options.enabled === undefined ? true : options.enabled;
 		this.w = options.weight ? options.weight : this.w;
 		this.parent.connect(this, this.child);
 		this.id = options.id || Gene.idFor(this.parent, this.child);
@@ -32,7 +32,7 @@ class Gene extends BaseSynapse {
 
 	mutateWeight() {
 		// Random weight shift -.5 to .5
-		const wShift = Math.random() * 1 - .5;
+		const wShift = Math.random() * 10 - 5;
 		this.w += wShift;
 		Logger.log(1, 'Mutate weight:', this.w, this.id);
 	}
@@ -61,6 +61,7 @@ class Gene extends BaseSynapse {
 			parent: this.parent.clone(),
 			child: this.child.clone(),
 			weight: this.w,
+			enabled: this.enabled,
 			id: this.id
 		});
 	}
@@ -137,6 +138,14 @@ class NeatNetwork extends BaseNetwork {
 		this.networkAction((n, layer, index) => Logger.log(level, '\t', n.isInput, n.isOutput, '\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
 		Logger.log(level, '\tGenes:')
 		this.genes.forEach(g => Logger.log(level, '\t', g.enabled, g.id, g.w))
+		Logger.log(level, '0, 0');
+		Logger.log(level, this.sendInput([0, 0]));
+		Logger.log(level, '1, 0');
+		Logger.log(level, this.sendInput([1, 0]));
+		Logger.log(level, '0, 1');
+		Logger.log(level, this.sendInput([0, 1]));
+		Logger.log(level, '1, 1');
+		Logger.log(level, this.sendInput([1, 1]));
 	}
 
 	static fromGenes(genes, options={}, id) {
@@ -159,8 +168,9 @@ class NeatNetwork extends BaseNetwork {
 		// recreate all connections on new neurons 
 		filteredGenome.forEach(gene =>
 			gene.setConnection(neuronHash[gene.parent.id], neuronHash[gene.child.id]));
-		return filteredGenome.filter(gene => !!gene && (gene.child.synapses.length
-				|| gene.isOutput));
+		const newFGenome= filteredGenome.filter(gene => !!gene && (gene.child.synapses.length
+			|| gene.isOutput));
+		return newFGenome
 	}
 
 	static geneLayerMap(genes) {
@@ -221,7 +231,6 @@ class NeatNetwork extends BaseNetwork {
 					? 'N' : (network.length - 1 - syn.child.layer);
 				// Child Index
 				const childIndex = syn.child.index === undefined ? 'N' : syn.child.index;
-
 				if(syn.isInput && inputs.indexOf(syn.parent) === -1)
 					inputs.push(syn.parent)
 				if(syn.isOutput && outputs.indexOf(syn.child) === -1)
@@ -238,8 +247,8 @@ class NeatNetwork extends BaseNetwork {
 					+ childIndex
 					+ inputKey
 					+ outputKey
-				syn.parent.id = 'Ne' + parentDepth
-					 + (inputKey) + (biasKey);
+				syn.parent.id = 'Ne' + parentDepth + parentIndex
+					 + (inputKey);
 				syn.child.id = 'Ne' + childDepth
 					+ childIndex + (outputKey);
 				if(syn.parent.isBias) {
@@ -310,8 +319,12 @@ class NeatNetwork extends BaseNetwork {
 		// HANDLE BIAS NEURONS
 		const traverseNetwork = (neuron, action, layerIndex=0, reverse=false) => {
 			action(neuron, layerIndex);
-			neuron.parentSynapses.forEach(syn =>
-				traverseNetwork(syn.parent, action, reverse ? layerIndex - 1 : layerIndex + 1, reverse));
+			// console.log('traverse', neuron.id, neuron.synapses.map(s => s.id))
+			neuron.parentSynapses.forEach(syn =>{
+				// console.log(syn.id, syn.parent.id, syn.child.id)
+				return traverseNetwork(syn.parent, action, reverse ? layerIndex - 1 : layerIndex + 1, reverse);
+			})
+			// console.log('revers')
 		};
 		const depthAction = (n, layerIndex) => {
 			numLayers = Math.max(numLayers, layerIndex);
