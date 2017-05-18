@@ -18,11 +18,11 @@ updateLogLevel();
 
 const NeatManager = require('./neuroevolution/NeatManager.js');
 const { NeatNetwork, Gene, GANeuron } = require('./neuroevolution/NeatNetwork.js');
-const gens = 20;
+const gens = 180;
 const nm = new NeatManager({
-	populationSize: 1000,
-	compatibilityThreshold: .3,
-	complexificationRate: .18,
+	populationSize: 700,
+	compatibilityThreshold: .13,
+	complexificationRate: .0006,
 	excessW: 1,
 	disjointW: 1,
 	degreeDeltaW: 1,

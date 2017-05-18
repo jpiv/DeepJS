@@ -12,6 +12,7 @@ class NeatManager {
 		this.populationSize = options.populationSize || 0;
 		this.population = this._initialPopulation();
 		this.compatibilityThreshold = options.compatibilityThreshold || 1;
+		this.innovationNum = 0;
 		this.complexificationRate = options.complexificationRate || .1;
 		// Excess gene weight
 		this.excessW = options.excessW || 1;
@@ -68,23 +69,24 @@ class NeatManager {
 			throw Error('NOT VIABLE')
 			return null;
 		} else {
-			if(this.shouldComplexify) {
-				genes = this.splitGene(genes);
-				NeatNetwork.geneLayerMap(genes)
-			}
-			if(this.shouldComplexify) {
-				genes = this.addNeuron(genes);
-				NeatNetwork.geneLayerMap(genes);
-				NeatNetwork.normalizeGenome(genes);
-			}
-			if(this.shouldComplexify) {
+			if(this.shouldMutate) {
 				genes = this.createNewConnection(genes);
 				NeatNetwork.geneLayerMap(genes)
-			}
-			if(this.shouldComplexify) {
-				genes = this.addBias(genes);
-				NeatNetwork.geneLayerMap(genes);
-				NeatNetwork.normalizeGenome(genes);
+			} else {
+				if(this.shouldComplexify) {
+					genes = this.addNeuron(genes);
+					NeatNetwork.geneLayerMap(genes);
+					NeatNetwork.normalizeGenome(genes);
+				}
+				if(this.shouldComplexify) {
+					genes = this.splitGene(genes);
+					NeatNetwork.geneLayerMap(genes)
+				}
+				if(this.shouldComplexify) {
+					genes = this.addBias(genes);
+					NeatNetwork.geneLayerMap(genes);
+					NeatNetwork.normalizeGenome(genes);
+				}
 			}
 			return NeatNetwork.fromGenes(
 				genes,
@@ -150,7 +152,6 @@ class NeatManager {
 		});
 		adjustedFitnesses
 			.sort((fit1, fit2) => fit1.fitness - fit2.fitness)
-			.forEach((fit, i, list) => fit.fitness = fit.fitness * (i < Math.floor(this.populationSize * .6) ? 0 : 1));
 		const totalFitness = adjustedFitnesses.reduce((acc, fit) => acc + fit.fitness, 0);
 		const popByProb = adjustedFitnesses.map(fit => fit.fitness / totalFitness);
 		const createSelectionSet = () => {
@@ -437,9 +438,8 @@ class NeatManager {
 	}
 
 	innovation(geneId) {
-		return 0;
-		return this.fullGenome.indexOf(geneId) > -1
-			? this.fullGenome.indexOf(geneId) : this.fullGenome.push(geneId) - 1;
+		this.innovationNum ++;
+		return this.innovationNum;
 	}
 
 	splitGene(genes) {
@@ -526,7 +526,7 @@ class NeatManager {
 			child: baseNeuron.synapses[0].child
 		});
 		const newGene2 = new Gene({
-			innovation,
+			innovation: this.innovation(),
 			parent: baseNeuron.parentSynapses[0].parent,
 			child: newNeuron
 		});

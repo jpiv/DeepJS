@@ -1,13 +1,13 @@
 const BaseNetwork = require('../base/BaseNetwork.js');
 const BaseSynapse = require('../base/BaseSynapse.js');
 const BaseNeuron = require('../base/BaseNeuron.js');
-const { sigmoid, sigmoidPrime } = require('../functions.js').activation;
+const { linear, sigmoid, sigmoidPrime } = require('../functions.js').activation;
 const Logger = require('../log.js');
 
 class Gene extends BaseSynapse {
 	constructor(options={}) {
 		const n1 =
-			options.parent || new GANeuron(options.innovation + 'P', options.isInput);
+			options.parent || new GANeuron(options.innovation + 'P', options.isInput, false, options.isBias);
 		const n2 =
 			options.child || new GANeuron(options.innovation + 'C', false, options.isOutput);
 		super(n1, n2);
@@ -32,7 +32,7 @@ class Gene extends BaseSynapse {
 
 	mutateWeight() {
 		// Random weight shift -.5 to .5
-		const wShift = Math.random() * 10 - 5;
+		const wShift = Math.random() * 1 - .5;
 		this.w += wShift;
 		Logger.log(1, 'Mutate weight:', this.w, this.id);
 	}
@@ -69,7 +69,7 @@ class Gene extends BaseSynapse {
 
 class GANeuron extends BaseNeuron {
 	constructor(id, isInput, isOutput, isBias) {
-		super(null, sigmoid, sigmoidPrime, null, null, id);
+		super(null, (isInput ? linear : sigmoid), sigmoidPrime, null, null, id);
 		this.isInput = isInput || false;
 		this.isOutput = isOutput || false;
 		this.isBias = isBias || false;
@@ -81,8 +81,9 @@ class GANeuron extends BaseNeuron {
 	}
 
 	inputImpulse(value) {
-		if(!this.isBias)
+		if(!this.isBias){
 			super.inputImpulse(value);
+		}
 	}
 
 	reconnect(syn, newChild) {
@@ -135,7 +136,8 @@ class NeatNetwork extends BaseNetwork {
 
 	logNetwork(level=1) {
 		Logger.log(level, this.id)
-		this.networkAction((n, layer, index) => Logger.log(level, '\t', n.isInput, n.isOutput, '\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
+		this.networkAction((n, layer, index) =>
+			Logger.log(level, '\t', n.isInput, n.isOutput, '\t', n.id, layer, index, n.synapses.map(s => s.id).join(', ')));
 		Logger.log(level, '\tGenes:')
 		this.genes.forEach(g => Logger.log(level, '\t', g.enabled, g.id, g.w))
 		Logger.log(level, '0, 0');

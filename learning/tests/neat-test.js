@@ -131,7 +131,7 @@ describe('Split Gene', () => {
 		var genes = make3LayerGenes();
 		const originalGeneCount = genes.length;
 		genes = nm.splitGene(genes);
-		expect(genes.length).to.equal(originalGeneCount + 2);
+		expect(genes.length).to.equal(originalGeneCount + 1);
 	});
 
 	it('Split gene should add 1 layer to default network', () => {
@@ -157,3 +157,101 @@ describe('Create new connection', () => {
 		}
 	});
 });
+
+
+describe('Network', () => {
+	it('Should do xor', () => {
+		const genes = makeXORGenes();
+		const net = NeatNetwork.fromGenes(genes);
+		console.log(net.inputNeurons.map(g=>g.id))
+		console.log(net.outputNeurons.map(g=>g.id))
+		net.logNetwork(null)
+	});
+});
+
+const makeXORGenes = () => {
+	// Layer 1
+	const l000 = new Gene({
+		innovation: 'l000',
+		isInput: true,
+		isOutput: false,
+		weight: 4.144149740115616,
+	});
+	const l001 = new Gene({
+		innovation: 'l001',
+		isOutput: false,
+		parent: l000.parent,
+		weight: -5.525492054527072
+	});
+	const l002 = new Gene({
+		innovation: 'l002',
+		parent: l000.parent,
+		weight: -6.058204454338836
+	});
+
+	const l010 = new Gene({
+		weight: -5.8389598903874145,
+		innovation: 'l010',
+		isInput: true,
+		child: l000.child
+	});
+	const l011 = new Gene({
+		weight: -5.404231019783034,
+		innovation: 'l011',
+		parent: l010.parent,
+		child: l001.child
+	});
+	const l012 = new Gene({
+		innovation: 'l012',
+		parent: l010.parent,
+		child: l002.child,
+		weight: 4.636770080147614
+	});
+
+	const l020 = new Gene({
+		weight: -1.5565624734097243,
+		innovation: 'l020',
+		isBias: true,
+		child: l000.child
+	});
+	const l021 = new Gene({
+		weight: 1.988408080661879,
+		innovation: 'l021',
+		parent: l020.parent,
+		child: l001.child
+	});
+	const l022 = new Gene({
+		weight: -1.8952576095256417,
+		innovation: 'l022',
+		parent: l020.parent,
+		child: l002.child
+	});
+
+	//Layer 2
+	const l100 = new Gene({
+		innovation: 'l100',
+		weight: 7.974674880478436,
+		isOutput: true,
+		parent: l000.child,
+	});
+	const l110 = new Gene({
+		weight: -4.742016362195881,
+		innovation: 'l110',
+		parent: l001.child,
+		child: l100.child
+	});
+	const l120 = new Gene({
+		innovation: 'l110',
+		parent: l002.child,
+		child: l100.child,
+		weight: 7.89443163283227,
+	});
+	const l130 = new Gene({
+		innovation: 'l120',
+		isBias: true,
+		child: l100.child,
+		weight: -3.6941208366073575
+	});
+
+	return [l000,l001,l002,l010,l011,l020,l021,l022,l012,l100,l110,l120,l130];
+};
