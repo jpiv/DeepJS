@@ -1,6 +1,7 @@
 const { NeatNetwork, Gene, GANeuron } = require('./NeatNetwork.js');
 const Logger = require('../log.js');
 const rng = require('random-word');
+const { makeXORGenes } = require('../tests/neat-test.js');
 
 class NeatManager {
 	constructor(options={}) {
@@ -8,12 +9,13 @@ class NeatManager {
 		this.networkOptions = options.network || {};
 		this.networkOptions.inputs = options.inputs || 2;
 		this.networkOptions.outputs = options.outputs || 1;
+		this.maxComplexity = options.maxComplexity || 10;
 		this.fullGenome = [];
 		this.populationSize = options.populationSize || 0;
 		this.population = this._initialPopulation();
 		this.compatibilityThreshold = options.compatibilityThreshold || 1;
 		this.innovationNum = 0;
-		this.complexificationRate = options.complexificationRate || .1;
+		this.complexificationRate = options.complexificationRate || 0;
 		// Excess gene weight
 		this.excessW = options.excessW || 1;
 		// Disjoint gene weight
@@ -27,8 +29,11 @@ class NeatManager {
 		this.species.map(s => Logger.log(1, '\t', s.name, s.population.length));
 	}
 
-	get shouldComplexify() {
+	shouldComplexify(size) {
+		if(size >= this.maxComplexity)
+			return false
 		return Math.random() < this.complexificationRate;
+		// console.log(size, this.maxComplexity, size/this.maxComplexity)
 	}
 
 	get shouldMutate() {
@@ -39,12 +44,14 @@ class NeatManager {
 		const population = [];
 		const base = this.makeNetwork(null, `NT-1`)
 		for(let i = 0; i < this.populationSize; i++) {
-			const newGenes = base.replicateGenes();
-			NeatNetwork.normalizeGenome(newGenes)	
-			const genes = NeatNetwork.geneLayerMap(newGenes);
-			population.push(this.makeNetwork(newGenes, `NT${i}`));
-			if(!i)
-				this.fullGenome = population[i].genes.map(g => g.id);
+			// const newGenes = base.replicateGenes();
+			// NeatNetwork.normalizeGenome(newGenes)	
+			// const genes = NeatNetwork.geneLayerMap(newGenes);
+			// population.push(this.makeNetwork(newGenes, `NT${i}`));
+			// if(!i)
+			// 	this.fullGenome = population[i].genes.map(g => g.id);
+			const genes = makeXORGenes(true);
+			population.push(this.makeNetwork(genes, `NT${i}`));
 		}
 		return population;
 	}
@@ -69,24 +76,51 @@ class NeatManager {
 			throw Error('NOT VIABLE')
 			return null;
 		} else {
-			if(this.shouldMutate) {
-				genes = this.createNewConnection(genes);
-				NeatNetwork.geneLayerMap(genes)
-			} else {
-				if(this.shouldComplexify) {
-					genes = this.addNeuron(genes);
-					NeatNetwork.geneLayerMap(genes);
-					NeatNetwork.normalizeGenome(genes);
-				}
-				if(this.shouldComplexify) {
-					genes = this.splitGene(genes);
-					NeatNetwork.geneLayerMap(genes)
-				}
-				if(this.shouldComplexify) {
-					genes = this.addBias(genes);
-					NeatNetwork.geneLayerMap(genes);
-					NeatNetwork.normalizeGenome(genes);
-				}
+			if(this.shouldComplexify(genes.length)) {
+				const pickOne = Math.floor(Math.random() * 9);
+
+				const options = [
+					() => {
+						genes = this.createNewConnection(genes);
+						NeatNetwork.geneLayerMap(genes)
+					},
+					() => {
+						genes = this.createNewConnection(genes);
+						NeatNetwork.geneLayerMap(genes)
+					},
+					() => {
+						genes = this.createNewConnection(genes);
+						NeatNetwork.geneLayerMap(genes)
+					},
+					() => {
+						genes = this.createNewConnection(genes);
+						NeatNetwork.geneLayerMap(genes)
+					},
+					() => {
+						genes = this.createNewConnection(genes);
+						NeatNetwork.geneLayerMap(genes)
+					},
+					() => {
+						genes = this.createNewConnection(genes);
+						NeatNetwork.geneLayerMap(genes)
+					},
+					() => {
+						genes = this.addNeuron(genes);
+						NeatNetwork.geneLayerMap(genes);
+						NeatNetwork.normalizeGenome(genes);
+					},
+					() => {
+						genes = this.splitGene(genes);
+						NeatNetwork.geneLayerMap(genes)
+					},
+					() => {
+						genes = this.addBias(genes);
+						NeatNetwork.geneLayerMap(genes);
+						NeatNetwork.normalizeGenome(genes);
+					}
+				];
+
+				options[pickOne]();
 			}
 			return NeatNetwork.fromGenes(
 				genes,
@@ -98,10 +132,12 @@ class NeatManager {
 
 	logSpeciesFitness() {
 		this.species.forEach(s => {
-			Logger.log(0, s.name);
+			Logger.log(0, s.name, s.population.length);
 			s.population.sort((s1, s2) => s1.fitness - s2.fitness).forEach((n,i,l) => {
-				Logger.log(0, '\t', n.id, n.fitness);
-				i === l.length - 1 && n.logNetwork(0);
+				if(i === l.length - 1) {
+					Logger.log(0, '\t', n.id, n.fitness);
+					n.logNetwork(0);
+				}
 			});
 		});
 		const strongestNet = this.strongestNetwork;
@@ -195,7 +231,7 @@ class NeatManager {
 			var parentB = getParent(parentA).net;
 			// console.log(parentA.id, parentB.id)
 			// Logger.log(1, 'Parents:', parentA.id, parentB.id);
-			if(!parentB){
+			if(!parentB || !parentA){
 				console.log('No Parent B')
 			}
 			const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
@@ -388,15 +424,25 @@ class NeatManager {
 				Logger.log(1, matchingSets.higher.map(g => g && g.id))
 				Logger.log(1, matchingSets.lower.map(g => g && g.id))
 				matchingSets.higher.forEach((id, i) => {
+					// Higher matching gene
+					let hGene = matchingSets.higher[i];
+					// Lower matching gene
+					let lGene = matchingSets.lower[i]
 					if(i < matchingSets.lower.length) {
-						if(!!matchingSets.lower[i] ^ !!matchingSets.higher[i])
+						if(!!lGene ^ !!hGene)
 							disjointGenes++;
-						else if(matchingSets.higher[i]) {
-							meanWeightDelta +=
-								Math.abs(matchingSets.higher[i].w - matchingSets.lower[i].w);
+						else if(hGene) {
+							// Higher weight
+							const hWeight = Math.max(hGene.w, lGene.w);
+							const weigthDelta =
+								Math.min(
+									1,
+									(Math.abs(hGene.w - lGene.w) / Math.abs(hWeight))
+								);
+							meanWeightDelta += weigthDelta
 							matchingGenes++;								
 						}
-					} else if(matchingSets.higher[i])
+					} else if(hGene)
 						excessGenes++;
 				});
 				meanWeightDelta = matchingGenes ? meanWeightDelta / matchingGenes : 0;
@@ -410,16 +456,16 @@ class NeatManager {
 				// }, 0);
 				// const minDegreeDelta = Math.abs(Math.min(...lowerInputDeg) - Math.min(...higherInputDeg));
 				// Calulate species distance
-				const speciesDistance =
-					(this.excessW * excessGenes) / N +
-					(this.disjointW * disjointGenes) / N +
-					// (this.degreeDeltaW * minDegreeDelta) +
-					(this.meanWeightW * meanWeightDelta);
+				const gDistance = ((this.excessW * excessGenes) / N +
+					(this.disjointW * disjointGenes) / N);
+				const wDistance = (this.meanWeightW * meanWeightDelta);
+				const speciesDistance = (gDistance + wDistance);
+				// console.log(speciesDistance, gDistance, wDistance)
 				// if(minDegreeDelta > 0)
 					// console.log(lowerInputDeg, higherInputDeg, speciesDistance)
 				Logger.log(1, 'SN:', speciesDistance);
 				if(assignedSpecies === null)
-					assignedSpecies = (speciesDistance <= this.compatibilityThreshold
+					assignedSpecies = ((gDistance <= this.compatibilityThreshold) && (wDistance <= this.compatibilityThreshold)
 						? speciesIndex : null);
 			});
 

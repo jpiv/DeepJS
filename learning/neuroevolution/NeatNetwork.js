@@ -45,7 +45,7 @@ class Gene extends BaseSynapse {
 	mutate() {
 		const mutations = [
 			this.mutateWeight,
-			this.mutateEnabled,
+			// this.mutateEnabled,
 		];
 		const mutationIndex = Math.floor(Math.random() * mutations.length);
 		mutations[mutationIndex].call(this);
@@ -125,7 +125,7 @@ class NeatNetwork extends BaseNetwork {
 		this.genes = _genes || this._constructGenes(this.numInputs, this.numOutputs);
 		this.setupNeuronGroups();
 		this.network = this._constructNetwork();
-		this.mutationRate = options.mutationRate || 0.01;
+		this.mutationRate = options.mutationRate || 0.0;
 		this.species = options.species;
 		this.fitnessFn = options.fitnessFn || Math.random;
 		this.fitnessGenerator = options.fitnessGenerator;

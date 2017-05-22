@@ -3,6 +3,7 @@ const { NeatNetwork, Gene, GANeuron } = require('../neuroevolution/NeatNetwork.j
 const fn = require('../functions.js');
 const Logger = require('../log.js');
 const { expect } = require('chai');
+describe = () => {};
 
 const make3LayerGenes = () => {
 	const a1c1 = new Gene({
@@ -169,34 +170,34 @@ describe('Network', () => {
 	});
 });
 
-const makeXORGenes = () => {
+const makeXORGenes = (randomize=false) => {
 	// Layer 1
 	const l000 = new Gene({
 		innovation: 'l000',
 		isInput: true,
 		isOutput: false,
-		weight: 4.144149740115616,
+		weight: randomize ? false : 4.144149740115616,
 	});
 	const l001 = new Gene({
 		innovation: 'l001',
 		isOutput: false,
 		parent: l000.parent,
-		weight: -5.525492054527072
+		weight: randomize ? false : -5.525492054527072
 	});
 	const l002 = new Gene({
 		innovation: 'l002',
 		parent: l000.parent,
-		weight: -6.058204454338836
+		weight: randomize ? false : -6.058204454338836
 	});
 
 	const l010 = new Gene({
-		weight: -5.8389598903874145,
+		weight: randomize ? false : -5.8389598903874145,
 		innovation: 'l010',
 		isInput: true,
 		child: l000.child
 	});
 	const l011 = new Gene({
-		weight: -5.404231019783034,
+		weight: randomize ? false : -5.404231019783034,
 		innovation: 'l011',
 		parent: l010.parent,
 		child: l001.child
@@ -205,23 +206,23 @@ const makeXORGenes = () => {
 		innovation: 'l012',
 		parent: l010.parent,
 		child: l002.child,
-		weight: 4.636770080147614
+		weight: randomize ? false : 4.636770080147614
 	});
 
 	const l020 = new Gene({
-		weight: -1.5565624734097243,
+		weight: randomize ? false : -1.5565624734097243,
 		innovation: 'l020',
 		isBias: true,
 		child: l000.child
 	});
 	const l021 = new Gene({
-		weight: 1.988408080661879,
+		weight: randomize ? false : 1.988408080661879,
 		innovation: 'l021',
 		parent: l020.parent,
 		child: l001.child
 	});
 	const l022 = new Gene({
-		weight: -1.8952576095256417,
+		weight: randomize ? false : -1.8952576095256417,
 		innovation: 'l022',
 		parent: l020.parent,
 		child: l002.child
@@ -230,28 +231,12 @@ const makeXORGenes = () => {
 	//Layer 2
 	const l100 = new Gene({
 		innovation: 'l100',
-		weight: 7.974674880478436,
+		weight: randomize ? false : 7.974674880478436,
 		isOutput: true,
 		parent: l000.child,
 	});
-	const l110 = new Gene({
-		weight: -4.742016362195881,
-		innovation: 'l110',
-		parent: l001.child,
-		child: l100.child
-	});
-	const l120 = new Gene({
-		innovation: 'l110',
-		parent: l002.child,
-		child: l100.child,
-		weight: 7.89443163283227,
-	});
-	const l130 = new Gene({
-		innovation: 'l120',
-		isBias: true,
-		child: l100.child,
-		weight: -3.6941208366073575
-	});
 
-	return [l000,l001,l002,l010,l011,l020,l021,l022,l012,l100,l110,l120,l130];
+	return [l000,l001,l002,l010,l011,l020,l021,l022,l012,l100];
 };
+
+module.exports = { makeXORGenes };
