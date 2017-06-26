@@ -44,14 +44,14 @@ class NeatManager {
 		const population = [];
 		const base = this.makeNetwork(null, `NT-1`)
 		for(let i = 0; i < this.populationSize; i++) {
-			// const newGenes = base.replicateGenes();
-			// NeatNetwork.normalizeGenome(newGenes)	
-			// const genes = NeatNetwork.geneLayerMap(newGenes);
-			// population.push(this.makeNetwork(newGenes, `NT${i}`));
-			// if(!i)
-			// 	this.fullGenome = population[i].genes.map(g => g.id);
-			const genes = makeXORGenes(true);
-			population.push(this.makeNetwork(genes, `NT${i}`));
+			const newGenes = base.replicateGenes();
+			NeatNetwork.normalizeGenome(newGenes)	
+			const genes = NeatNetwork.geneLayerMap(newGenes);
+			population.push(this.makeNetwork(newGenes, `NT${i}`));
+			if(!i)
+				this.fullGenome = population[i].genes.map(g => g.id);
+			// const genes = makeXORGenes(true);
+			// population.push(this.makeNetwork(genes, `NT${i}`));
 		}
 		return population;
 	}

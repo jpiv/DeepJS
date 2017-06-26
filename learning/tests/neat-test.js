@@ -236,6 +236,13 @@ const makeXORGenes = (randomize=false) => {
 		parent: l000.child,
 	});
 
+	const l110 = new Gene({
+		innovation: 'l110',
+		weight: randomize ? false : 7.974674880478436,
+		parent: l100.child,
+		child: l001.child,
+	});
+
 	return [l000,l001,l002,l010,l011,l020,l021,l022,l012,l100];
 };
 

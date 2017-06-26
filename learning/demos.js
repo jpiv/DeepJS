@@ -18,18 +18,18 @@ updateLogLevel();
 
 const NeatManager = require('./neuroevolution/NeatManager.js');
 const { NeatNetwork, Gene, GANeuron } = require('./neuroevolution/NeatNetwork.js');
-const gens = 220;
+const gens = 4000;
 const nm = new NeatManager({
-	populationSize: 1000,
-	compatibilityThreshold: .48,
-	complexificationRate: 0.23,
+	populationSize: 250,
+	compatibilityThreshold: .24,
+	complexificationRate: 0.15,
 	maxComplexity: 20,
 	excessW: 1,
 	disjointW: 1,
 	degreeDeltaW: 1,
-	meanWeightW: 0.0000000001,
+	meanWeightW: 0.000000000001,
 	network: {
-		mutationRate: .13,
+		mutationRate: .24,
 		inputs: 2,
 		fitnessGenerator: function* () {
 			const fitnessSet = setGen.XOR(4);
@@ -53,7 +53,8 @@ nm.populationFitness();
 nm.logSpeciesFitness();
 console.log('-------')
 for(let i = 0; i < gens; i++) {
-	console.log('gen:', i + 1, '# species', nm.species.length, 'pop:', nm.population.length);
+	const fit = nm.strongestNetwork.fitness
+	console.log('gen:', i + 1, '# species', nm.species.length, 'pop:', nm.population.length, 'fitness:', fit);
 	nm.advanceGeneration();
 	nm.populationFitness();
 }
