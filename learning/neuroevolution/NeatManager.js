@@ -33,7 +33,6 @@ class NeatManager {
 		if(size >= this.maxComplexity)
 			return false
 		return Math.random() < this.complexificationRate;
-		// console.log(size, this.maxComplexity, size/this.maxComplexity)
 	}
 
 	get shouldMutate() {
