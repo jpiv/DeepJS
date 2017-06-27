@@ -33,7 +33,7 @@ class Gene extends BaseSynapse {
 	mutateWeight() {
 		// Random weight shift -.5 to .5
 		const wShift = Math.random() * 20 - 10;
-		this.w += wShift;
+		this.w = wShift;
 		Logger.log(1, 'Mutate weight:', this.w, this.id);
 	}
 

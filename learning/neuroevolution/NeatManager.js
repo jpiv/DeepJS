@@ -147,13 +147,10 @@ class NeatManager {
 	}
 
 	get strongestNetwork() {
-		const strongestSpec = this.species.reduce((acc, spec) => {
-			if(!acc)
-				return spec;
-			return acc.population[acc.population.length - 1].fitness >= spec.population[spec.population.length - 1].fitness
-				? acc : spec;
-		}, null);	
-		return strongestSpec.population[strongestSpec.population.length - 1];
+		const fits = this.species.map(spec => {
+			return spec.population.reduce((acc, net) => acc.fitness >= net.fitness ? acc : net, 0)
+		}).sort((net1, net2) => net2.fitness - net1.fitness);
+		return fits[0]
 	}
 
 	populationFitness() {
