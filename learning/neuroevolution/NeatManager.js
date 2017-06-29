@@ -245,10 +245,10 @@ class NeatManager {
 				.sort((n1, n2) => n1.fitness - n2.fitness);
 
 			const totalSpecFitness = popByFitness.reduce((acc, n, i) =>
-				acc + (Math.pow(n.fitness, 2)), 0);
+				acc + (Math.pow(n.fitness, 8)), 0);
 			// Array of species pobabilities to reproduce
 			const popByProb = popByFitness.map((n, i) =>
-				(Math.pow(n.fitness, 2)) / totalSpecFitness);
+				(Math.pow(n.fitness, 8)) / totalSpecFitness);
 			const createSelectionSet = () => {
 				var lastProb = popByProb[0];
 				return popByProb.map((prob, speciesIndex) => {

@@ -38,7 +38,7 @@ class Gene extends BaseSynapse {
 
 	mutateShiftWeight() {
 		// Random weight shift -.5 to .5 
-		const wShift = Math.random() * 1 - .5;
+		const wShift = Math.random() * .5 - .25;
 		this.w += wShift;
 		Logger.log(1, 'Mutate weight:', this.w, this.id);
 	}
@@ -51,6 +51,13 @@ class Gene extends BaseSynapse {
 	mutate() {
 		const mutations = [
 			this.mutateShiftWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
 			this.mutateRandomizeWeight,
 			this.mutateRandomizeWeight,
 			this.mutateRandomizeWeight,
@@ -292,9 +299,17 @@ class NeatNetwork extends BaseNetwork {
 
 	replicateGenes() {
 		const mutating = this.shouldMutate;
-		const newGenes = this.genes.map(g => {
+		const numMutatingGenes = Math.floor(Math.random() * this.genes.length);
+		const geneRange = Array.from(new Array(numMutatingGenes), (n, i) => i)
+		const genesToMutate = [];
+		for(let i = 0; i <= numMutatingGenes; i++) {
+			const index = Math.floor(Math.random() * geneRange.length);
+			const splicedGene = geneRange.splice(index, 1)[0]
+			 splicedGene!== undefined && genesToMutate.push(splicedGene);
+		};
+		const newGenes = this.genes.map((g, i) => {
 			const newG = g.clone();
-			if(mutating && this.shouldMutate)
+			if(mutating && genesToMutate.indexOf(i) > -1)
 				newG.mutate();	
 			return newG;
 		});
