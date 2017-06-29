@@ -30,10 +30,16 @@ class Gene extends BaseSynapse {
 		this.parent.connect(this, this.child);
 	}
 
-	mutateWeight() {
-		// Random weight shift -.5 to .5
-		const wShift = Math.random() * 20 - 10;
-		this.w = wShift;
+	mutateRandomizeWeight() {
+		const newWeight = Math.random() * 40 - 20;
+		this.w = newWeight;
+		Logger.log(1, 'Mutate weight:', this.w, this.id);
+	}
+
+	mutateShiftWeight() {
+		// Random weight shift -.5 to .5 
+		const wShift = Math.random() * 1 - .5;
+		this.w += wShift;
 		Logger.log(1, 'Mutate weight:', this.w, this.id);
 	}
 
@@ -44,7 +50,16 @@ class Gene extends BaseSynapse {
 
 	mutate() {
 		const mutations = [
-			this.mutateWeight,
+			this.mutateShiftWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
+			this.mutateRandomizeWeight,
 			// this.mutateEnabled,
 		];
 		const mutationIndex = Math.floor(Math.random() * mutations.length);
@@ -276,9 +291,10 @@ class NeatNetwork extends BaseNetwork {
 	}
 
 	replicateGenes() {
+		const mutating = this.shouldMutate;
 		const newGenes = this.genes.map(g => {
 			const newG = g.clone();
-			if(this.shouldMutate)
+			if(mutating && this.shouldMutate)
 				newG.mutate();	
 			return newG;
 		});

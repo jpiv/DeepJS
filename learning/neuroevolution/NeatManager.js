@@ -165,145 +165,145 @@ class NeatManager {
 		// 	console.log("up ")
 		// }
 		const nextGeneration = [];
-		// const speciesFitnesses = this.species.map(spec =>
-		// 	spec.population.reduce((acc, network) =>
-		// 		acc + 
-		// 			(network.fitness / spec.population.length)
-		// 	, 0));
-		// const totalFitness = speciesFitnesses.reduce((acc, fit) => acc + fit, 0);
+		const speciesFitnesses = this.species.map(spec =>
+			spec.population.reduce((acc, network) =>
+				acc + 
+					(network.fitness / spec.population.length)
+			, 0));
+		const totalFitness = speciesFitnesses.reduce((acc, fit) => acc + fit, 0);
 		// Proportional amount of reproductions allowed per species
-		// const speciesOffspringAmounts = speciesFitnesses.map(fitness =>
-		// 	Math.ceil((fitness / totalFitness) * this.populationSize));
-		// Logger.log(7, 'Species Fitnesses:', speciesFitnesses, 'total:', totalFitness);
-		// Logger.log(7, 'Offspring', speciesOffspringAmounts);
-		var adjustedFitnesses = [];	
-		this.species.forEach((spec, i) => {
-			const speciesAdjustedFitnesses = spec.population.map(net =>
-				({ fitness: net.fitness / spec.population.length, net }));
-			adjustedFitnesses = [...adjustedFitnesses, ...speciesAdjustedFitnesses];
-		});
-		adjustedFitnesses
-			.sort((fit1, fit2) => fit1.fitness - fit2.fitness)
-		const totalFitness = adjustedFitnesses.reduce((acc, fit) => acc + fit.fitness, 0);
-		const popByProb = adjustedFitnesses.map(fit => fit.fitness / totalFitness);
-		const createSelectionSet = () => {
-			var lastProb = popByProb[0];
-			return popByProb.map((prob, speciesIndex) => {
-				if(popByProb.length === 1)
-					return 1;
-				if(speciesIndex === 0)
-					return prob;
-				lastProb = lastProb + prob;
-				return lastProb;
-			});
-		};
-		const probSelectionSet = createSelectionSet();
-		Logger.log(3, 'adjustedFitnesses', adjustedFitnesses.map(fit => `${fit.fitness} ${fit.net.species}`))
-		Logger.log(3, 'popByProb', popByProb)
-		Logger.log(3, 'probSelectionSet', probSelectionSet)
-		this.population.forEach((individual, childIndex) => {
-		 	const getParent = (excludeN) => {
-				const outcome = Math.random();
-				var excludeIndex;
-				const fitnessSelection = adjustedFitnesses.filter((fit, i) => {
-					if(fit.net === excludeN) {
-						excludeIndex = i; 
-						return false;
-					}
-					return true;
+		const speciesOffspringAmounts = speciesFitnesses.map(fitness =>
+			Math.ceil((fitness / totalFitness) * this.populationSize));
+		Logger.log(7, 'Species Fitnesses:', speciesFitnesses, 'total:', totalFitness);
+		Logger.log(7, 'Offspring', speciesOffspringAmounts);
+		// var adjustedFitnesses = [];	
+		// this.species.forEach((spec, i) => {
+		// 	const speciesAdjustedFitnesses = spec.population.map(net =>
+		// 		({ fitness: net.fitness / spec.population.length, net }));
+		// 	adjustedFitnesses = [...adjustedFitnesses, ...speciesAdjustedFitnesses];
+		// });
+		// adjustedFitnesses
+		// 	.sort((fit1, fit2) => fit1.fitness - fit2.fitness)
+		// const totalFitness = adjustedFitnesses.reduce((acc, fit) => acc + fit.fitness, 0);
+		// const popByProb = adjustedFitnesses.map(fit => fit.fitness / totalFitness);
+		// const createSelectionSet = () => {
+		// 	var lastProb = popByProb[0];
+		// 	return popByProb.map((prob, speciesIndex) => {
+		// 		if(popByProb.length === 1)
+		// 			return 1;
+		// 		if(speciesIndex === 0)
+		// 			return prob;
+		// 		lastProb = lastProb + prob;
+		// 		return lastProb;
+		// 	});
+		// };
+		// const probSelectionSet = createSelectionSet();
+		// Logger.log(3, 'adjustedFitnesses', adjustedFitnesses.map(fit => `${fit.fitness} ${fit.net.species}`))
+		// Logger.log(3, 'popByProb', popByProb)
+		// Logger.log(3, 'probSelectionSet', probSelectionSet)
+		// this.population.forEach((individual, childIndex) => {
+		//  	const getParent = (excludeN) => {
+		// 		const outcome = Math.random();
+		// 		var excludeIndex;
+		// 		const fitnessSelection = adjustedFitnesses.filter((fit, i) => {
+		// 			if(fit.net === excludeN) {
+		// 				excludeIndex = i; 
+		// 				return false;
+		// 			}
+		// 			return true;
+		// 		});
+		// 		const probSelection = probSelectionSet.filter((p, i) =>
+		// 			i !== excludeIndex);
+		// 		return fitnessSelection
+		// 			.reduce((acc, net, i) =>
+		// 				acc || (outcome < probSelection[i]
+		// 					&& net),
+		// 				null
+		// 			) || fitnessSelection[fitnessSelection.length - 1];
+		// 	};
+		// 	const parentA = getParent().net;
+		// 	// Logger.log(3, popByFitness.indexOf(parentA))
+		// 	// TODO: Only mate with self if species size 1
+		// 	var parentB = getParent(parentA).net;
+		// 	// console.log(parentA.id, parentB.id)
+		// 	// Logger.log(1, 'Parents:', parentA.id, parentB.id);
+		// 	if(!parentB || !parentA){
+		// 		console.log('No Parent B')
+		// 	}
+		// 	const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
+		// 		|| this.makeNetwork(null, `N${childIndex}`);
+		// 	childIndex++;
+		// 	nextGeneration.push(child);
+		// });
+		// Calculate adjusted fitness for each specicies
+		// Calculate proportion of total adjusted fitness
+		this.species.forEach((spec, speciesIndex) => {
+
+			var childIndex = 0;
+			// Array of species population fitness sorted by fitness
+			const popByFitness = spec.population
+				.sort((n1, n2) => n1.fitness - n2.fitness);
+
+			const totalSpecFitness = popByFitness.reduce((acc, n, i) =>
+				acc + (Math.pow(n.fitness, 2)), 0);
+			// Array of species pobabilities to reproduce
+			const popByProb = popByFitness.map((n, i) =>
+				(Math.pow(n.fitness, 2)) / totalSpecFitness);
+			const createSelectionSet = () => {
+				var lastProb = popByProb[0];
+				return popByProb.map((prob, speciesIndex) => {
+					if(popByProb.length === 1)
+						return 1;
+					if(speciesIndex === 0)
+						return prob;
+					lastProb = lastProb + prob;
+					return lastProb;
 				});
-				const probSelection = probSelectionSet.filter((p, i) =>
-					i !== excludeIndex);
-				return fitnessSelection
-					.reduce((acc, net, i) =>
-						acc || (outcome < probSelection[i]
-							&& net),
-						null
-					) || fitnessSelection[fitnessSelection.length - 1];
 			};
-			const parentA = getParent().net;
-			// Logger.log(3, popByFitness.indexOf(parentA))
-			// TODO: Only mate with self if species size 1
-			var parentB = getParent(parentA).net;
-			// console.log(parentA.id, parentB.id)
-			// Logger.log(1, 'Parents:', parentA.id, parentB.id);
-			if(!parentB || !parentA){
-				console.log('No Parent B')
+			const probSelectionSet = createSelectionSet();
+			Logger.log(3, 'Fitness:', popByFitness.map(i => i.fitness))
+			Logger.log(3, 'Prob:', popByProb);
+			Logger.log(3, 'Prob Selection:', probSelectionSet)
+			if(speciesOffspringAmounts[speciesIndex] < 1)
+				console.log('dead species', speciesOffspringAmounts[speciesIndex]);	
+			for(let i = 0; i < speciesOffspringAmounts[speciesIndex]; i++) {
+				const getParent = (excludeN) => {
+					const outcome = Math.random();
+					var excludeIndex;
+					const fitnessSelection = popByFitness.filter((n, i) => {
+						if(n === excludeN) {
+							excludeIndex = i; 
+							return false;
+						}
+						return true;
+					});
+					const probSelection = probSelectionSet.filter((p, i) =>
+						i !== excludeIndex);
+					return fitnessSelection
+						.reduce((acc, net, i) =>
+							acc || (outcome < probSelection[i]
+								&& net),
+							null
+						) || fitnessSelection[fitnessSelection.length - 1];
+				};
+				const parentA = getParent();
+				// Logger.log(3, popByFitness.indexOf(parentA))
+				// TODO: Only mate with self if species size 1
+				var parentB = getParent(spec.population.length > 1 && parentA);
+				// console.log(parentA.id, parentB.id)
+				// Logger.log(1, 'Parents:', parentA.id, parentB.id);
+				if(!parentB){
+					console.log(probSelectionSet, spec.population.length)
+					console.log('hereeee', speciesOffspringAmounts[speciesIndex])
+				}
+				const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
+					|| this.makeNetwork(null, `N${childIndex}`);
+				childIndex++;
+				nextGeneration.push(child);
 			}
-			const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
-				|| this.makeNetwork(null, `N${childIndex}`);
-			childIndex++;
-			nextGeneration.push(child);
 		});
 		this.population = nextGeneration;
 		this.species = this.speciate(true);
-		// Calculate adjusted fitness for each specicies
-		// Calculate proportion of total adjusted fitness
-		// this.species.forEach((spec, speciesIndex) => {
-
-			// var childIndex = 0;
-			// // Array of species population fitness sorted by fitness
-			// const popByFitness = spec.population
-			// 	.sort((n1, n2) => n1.fitness - n2.fitness);
-
-			// const totalSpecFitness = popByFitness.reduce((acc, n, i) =>
-			// 	acc + i, 1);
-			// // Array of species pobabilities to reproduce
-			// const popByProb = popByFitness.map((n, i) =>
-			// 	i < 100 ? 1 / 1000 : 0);
-			// const createSelectionSet = () => {
-			// 	var lastProb = popByProb[0];
-			// 	return popByProb.map((prob, speciesIndex) => {
-			// 		if(popByProb.length === 1)
-			// 			return 1;
-			// 		if(speciesIndex === 0)
-			// 			return prob;
-			// 		lastProb = lastProb + prob;
-			// 		return lastProb;
-			// 	});
-			// };
-			// const probSelectionSet = createSelectionSet();
-			// Logger.log(3, 'Fitness:', popByFitness.map(i => i.fitness))
-			// Logger.log(3, 'Prob:', popByProb);
-			// Logger.log(3, 'Prob Selection:', probSelectionSet)
-			// if(speciesOffspringAmounts[speciesIndex] < 1)
-			// 	console.log('dead species', speciesOffspringAmounts[speciesIndex]);	
-			// for(let i = 0; i < speciesOffspringAmounts[speciesIndex]; i++) {
-			// 	const getParent = (excludeN) => {
-			// 		const outcome = Math.random();
-			// 		var excludeIndex;
-			// 		const fitnessSelection = popByFitness.filter((n, i) => {
-			// 			if(n === excludeN) {
-			// 				excludeIndex = i; 
-			// 				return false;
-			// 			}
-			// 			return true;
-			// 		});
-			// 		const probSelection = probSelectionSet.filter((p, i) =>
-			// 			i !== excludeIndex);
-			// 		return fitnessSelection
-			// 			.reduce((acc, net, i) =>
-			// 				acc || (outcome < probSelection[i]
-			// 					&& net),
-			// 				null
-			// 			) || fitnessSelection[fitnessSelection.length - 1];
-			// 	};
-			// 	const parentA = getParent();
-			// 	// Logger.log(3, popByFitness.indexOf(parentA))
-			// 	// TODO: Only mate with self if species size 1
-			// 	var parentB = getParent(spec.population.length > 1 && parentA);
-			// 	// console.log(parentA.id, parentB.id)
-			// 	// Logger.log(1, 'Parents:', parentA.id, parentB.id);
-			// 	if(!parentB){
-			// 		console.log(probSelectionSet, spec.population.length)
-			// 		console.log('hereeee', speciesOffspringAmounts[speciesIndex])
-			// 	}
-			// 	const child = (parentB && this.reproduce(parentA, parentB, `N${childIndex}`))
-			// 		|| this.makeNetwork(null, `N${childIndex}`);
-			// 	childIndex++;
-			// 	nextGeneration.push(child);
-			// }
-		// });
 	}
 
 	reproduce(networkA, networkB, id) {
