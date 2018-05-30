@@ -5,8 +5,8 @@ Deep Learning JavaScript tools
 Framework around creating Neural Networks trained with backpropagation
 Live visualizations of Networks during training with configurable parameters
 
-![Network Visual](https://s22.postimg.cc/bvfivwxwd/Screen_Shot_2018-05-30_at_2.37.41_PM.png)
-![Network Visual 2](https://s22.postimg.cc/yww41puzx/Screen_Shot_2018-05-30_at_2.38.27_PM.png)
+![Network Visual](https://s22.postimg.cc/ilw05cl29/Screen_Shot_2018-05-30_at_2.37.41_PM.png)
+![Network Visual 2](https://s22.postimg.cc/frsurygc1/Screen_Shot_2018-05-30_at_2.38.27_PM.png)
 
 
 ## JavaScript Implentation of NEAT(Neuro-evoluation of Augmenting Topologies) Aglorithim
