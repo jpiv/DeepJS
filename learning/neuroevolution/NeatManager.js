@@ -13,7 +13,8 @@ class NeatManager {
 		this.fullGenome = [];
 		this.populationSize = options.populationSize || 0;
 		this.population = this._initialPopulation();
-		this.compatibilityThreshold = options.compatibilityThreshold || 1;
+		this.geneCompatibilityThreshold = options.geneCompatibilityThreshold || 1;
+		this.weightCompatibilityThreshold = options.weightCompatibilityThreshold || 1;
 		this.innovationNum = 0;
 		this.complexificationRate = options.complexificationRate || 0;
 		// Excess gene weight
@@ -30,8 +31,10 @@ class NeatManager {
 	}
 
 	shouldComplexify(size) {
-		if(size >= this.maxComplexity)
+		if(size >= this.maxComplexity) {
+			console.log('Max complexity:',this.maxComplexity)
 			return false
+		}
 		return Math.random() < this.complexificationRate;
 	}
 
@@ -173,7 +176,7 @@ class NeatManager {
 		const totalFitness = speciesFitnesses.reduce((acc, fit) => acc + fit, 0);
 		// Proportional amount of reproductions allowed per species
 		const speciesOffspringAmounts = speciesFitnesses.map(fitness =>
-			Math.ceil((fitness / totalFitness) * this.populationSize));
+			Math.floor((fitness / totalFitness) * this.populationSize));
 		Logger.log(7, 'Species Fitnesses:', speciesFitnesses, 'total:', totalFitness);
 		Logger.log(7, 'Offspring', speciesOffspringAmounts);
 		// var adjustedFitnesses = [];	
@@ -303,7 +306,7 @@ class NeatManager {
 			}
 		});
 		this.population = nextGeneration;
-		this.species = this.speciate(true);
+		this.species = Logger.time('speciate', () => this.speciate(true));
 	}
 
 	reproduce(networkA, networkB, id) {
@@ -358,15 +361,37 @@ class NeatManager {
 	}
 
 	geneMatchingSets(genesA, genesB) {
-		Logger.log(5, this.fullGenome, genesB.map(g=>g.id), genesA.map(g=>g.id))
-		const matchingSetA = this.fullGenome.map((id, i) =>
-			genesA.find(g => g.id === id));
-		while(matchingSetA.length && !matchingSetA[matchingSetA.length - 1])
-			matchingSetA.pop();
-		const matchingSetB = this.fullGenome.map((id, i) =>
-			genesB.find(g => g.id === id));
-		while(matchingSetB.length && !matchingSetB[matchingSetB.length - 1])
-			matchingSetB.pop();
+		const makeGeneMap = genes => {
+			const map = {}
+			genes.forEach(g => map[g.id] = g)
+			return map
+		}
+		const geneSetA = makeGeneMap(genesA);
+		const geneSetB = makeGeneMap(genesB);
+		const matchingSetA = [];
+		const matchingSetB = [];
+		const matchingSetLength = genesA.length + genesB.length
+		let addedGenes = 0;
+		let i = 0;
+
+		// TODO: Why does this fail sometimes without second check, maybe bug
+		while (addedGenes < matchingSetLength && i < this.fullGenome.length) {
+			const id = this.fullGenome[i];
+			if (geneSetA.hasOwnProperty(id)) {
+				addedGenes ++;
+				matchingSetA.push(geneSetA[id])
+			} else {
+				matchingSetA.push(null);
+			}
+			if (geneSetB.hasOwnProperty(id)) {
+				addedGenes ++;
+				matchingSetB.push(geneSetB[id])
+			} else {
+				matchingSetB.push(null);
+			}
+			i++;
+		}
+
 		// Matching set with more or less genes
 		let higherMatchingSet = matchingSetB;
 		let lowerMatchingSet = matchingSetA;
@@ -386,13 +411,13 @@ class NeatManager {
 	}
 
 	makeFullGenome() {
-		const genomeHash = {};
+		const genomeSet = new Set();
 		this.population.forEach(net => {
 			net.networkAction(n =>
 				n.synapses.forEach(syn =>
-					genomeHash[syn.id] = 1));
+					genomeSet.add(syn.id)));
 		});
-		this.fullGenome = Object.keys(genomeHash);
+		this.fullGenome = Array.from(genomeSet);
 	}
 
 	speciate(respeciate=false) {
@@ -415,7 +440,7 @@ class NeatManager {
 
 				let excessGenes = 0;
 				let disjointGenes = 0;
-				let meanWeightDelta = 0;
+				let weightDelta = 0;
 				let matchingGenes = 0;
 				Logger.log(1, matchingSets.higher.map(g => g && g.id))
 				Logger.log(1, matchingSets.lower.map(g => g && g.id))
@@ -430,19 +455,22 @@ class NeatManager {
 						else if(hGene) {
 							// Higher weight
 							const hWeight = Math.max(hGene.w, lGene.w);
-							const weigthDelta =
-								Math.min(
-									1,
-									(Math.abs(hGene.w - lGene.w) / Math.abs(hWeight))
-								);
-							meanWeightDelta += weigthDelta
+							// const weigthDelta =
+							// 	Math.min(
+							// 		1,
+							// 		(Math.abs(hGene.w - lGene.w) / Math.abs(hWeight))
+							// 	);
+							// weightDelta += weigthDelta
+							if (Math.abs(hGene.w - lGene.w) > 10) {
+								weightDelta ++;
+							}
 							matchingGenes++;								
 						}
 					} else if(hGene)
 						excessGenes++;
 				});
-				meanWeightDelta = matchingGenes ? meanWeightDelta / matchingGenes : 0;
-				Logger.log(2, excessGenes, disjointGenes, meanWeightDelta, 'ex di');
+				weightDelta = matchingGenes ? weightDelta / matchingGenes : 0;
+				Logger.log(2, excessGenes, disjointGenes, weightDelta, 'ex di');
 				// Number of genes in the larger genome
 				const N = matchingSets.higher.length;
 				// const lowerInputDeg = NeatNetwork.getInputDegrees(matchingSets.lower);
@@ -454,14 +482,14 @@ class NeatManager {
 				// Calulate species distance
 				const gDistance = ((this.excessW * excessGenes) / N +
 					(this.disjointW * disjointGenes) / N);
-				const wDistance = (this.meanWeightW * meanWeightDelta);
+				const wDistance = (this.meanWeightW * weightDelta);
 				const speciesDistance = (gDistance + wDistance);
 				// console.log(speciesDistance, gDistance, wDistance)
 				// if(minDegreeDelta > 0)
 					// console.log(lowerInputDeg, higherInputDeg, speciesDistance)
 				Logger.log(1, 'SN:', speciesDistance);
 				if(assignedSpecies === null)
-					assignedSpecies = ((gDistance <= this.compatibilityThreshold) && (wDistance <= this.compatibilityThreshold)
+					assignedSpecies = ((gDistance <= this.geneCompatibilityThreshold) && (wDistance <= this.weightCompatibilityThreshold)
 						? speciesIndex : null);
 			});
 
@@ -580,9 +608,11 @@ class NeatManager {
 		const { layerIndex, geneIndex } = this._randomGeneIndex(true, false, glMap);
 		const baseNeuron = glMap[layerIndex][geneIndex];
 		const childNeuron = baseNeuron.synapses[
-			Math.floor(Math.random() * baseNeuron.synapses.length)].child;
+			Math.floor(Math.random() * baseNeuron.synapses.length)].child;	
+
+        const hasBias = !!childNeuron.parentSynapses.find(syn => syn.parent.isBias);
 		// Don't connect parent neurons to inputs
-		if(childNeuron.isInput || childNeuron.isBias)
+		if(childNeuron.isInput || childNeuron.isBias || hasBias)
 			return genes;
 		const parentNeuron = new GANeuron(childNeuron.id + 'B', false, false, true);
 		const geneId = Gene.idFor(parentNeuron, childNeuron);
